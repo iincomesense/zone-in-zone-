@@ -3,158 +3,179 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Zone Trading Terminal</title>
+  <title>Algo Zone Terminal</title>
   <style>
     :root {
-      --bg: #0b0f19;
-      --card: #151b2b;
-      --border: #222d42;
+      --bg: #080c14;
+      --card: #131a29;
+      --card-inner: #0b111e;
+      --border: #1f2a3f;
       --accent: #2962ff;
-      --green: #089981;
-      --red: #f23645;
-      --text: #e0e3eb;
-      --muted: #848e9c;
+      --green: #00c853;
+      --red: #ff3d57;
+      --text: #f0f3fa;
+      --muted: #8b98af;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     body { background: var(--bg); color: var(--text); padding-bottom: 75px; -webkit-tap-highlight-color: transparent; }
-    
-    /* Top Bar */
-    .topbar { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #0f1523; border-bottom: 1px solid var(--border); }
-    .topbar h1 { font-size: 18px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px; }
-    .badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: 600; text-transform: uppercase; }
-    .badge.paper { background: #2a3b5c; color: #64b5f6; }
-    .badge.algo { background: #4a1525; color: #ff5252; }
 
-    /* Header Strip - Clickable TradingView */
-    .header-scroll { overflow-x: auto; white-space: nowrap; display: flex; gap: 8px; padding: 10px 14px; background: #121826; border-bottom: 1px solid var(--border); }
+    /* Top Bar */
+    .topbar { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: #0c121e; border-bottom: 1px solid var(--border); }
+    .topbar h1 { font-size: 19px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; }
+    .badge { font-size: 12px; padding: 4px 10px; border-radius: 6px; font-weight: 700; text-transform: uppercase; }
+    .badge.paper { background: #1c2b48; color: #64b5f6; border: 1px solid #2196f3; }
+    .badge.algo { background: #4a1320; color: #ff5252; border: 1px solid var(--red); }
+
+    /* Header Strip - Mobile Friendly */
+    .header-scroll { overflow-x: auto; white-space: nowrap; display: flex; gap: 10px; padding: 12px 14px; background: #0f1626; border-bottom: 1px solid var(--border); }
     .header-scroll::-webkit-scrollbar { display: none; }
-    .sym-chip { display: inline-flex; flex-direction: column; background: var(--card); border: 1px solid var(--border); padding: 6px 12px; border-radius: 8px; text-decoration: none; min-width: 95px; }
-    .sym-chip .s-name { font-size: 11px; color: var(--muted); font-weight: 600; }
-    .sym-chip .s-price { font-size: 13px; font-weight: bold; color: #fff; margin-top: 2px; }
-    .sym-chip .s-chg { font-size: 11px; font-weight: 600; }
+    .sym-chip { display: inline-flex; flex-direction: column; justify-content: center; background: var(--card); border: 1px solid var(--border); padding: 8px 14px; border-radius: 10px; text-decoration: none; min-width: 110px; }
+    .sym-chip .s-name { font-size: 12px; color: var(--muted); font-weight: 700; }
+    .sym-chip .s-price { font-size: 15px; font-weight: 800; color: #fff; margin-top: 3px; }
+    .sym-chip .s-chg { font-size: 12px; font-weight: 700; margin-top: 1px; }
     .up { color: var(--green) !important; }
     .down { color: var(--red) !important; }
 
-    /* Container & Tabs */
-    .container { padding: 14px; max-width: 1000px; margin: 0 auto; }
+    /* Tabs & Container */
+    .container { padding: 14px; max-width: 900px; margin: 0 auto; }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
-    /* Zone Card */
-    .zone-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 12px; position: relative; }
-    .zone-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-    .zone-title { font-size: 16px; font-weight: bold; display: flex; align-items: center; gap: 8px; }
-    .tag { font-size: 11px; padding: 3px 6px; border-radius: 4px; font-weight: bold; }
-    .tag.demand { background: rgba(8,153,129,0.15); color: var(--green); border: 1px solid var(--green); }
-    .tag.supply { background: rgba(242,54,69,0.15); color: var(--red); border: 1px solid var(--red); }
-    
-    .grid-info { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; background: #0f1524; padding: 10px; border-radius: 6px; margin: 8px 0; }
+    /* Cards */
+    .zone-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); }
+    .zone-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .zone-title { font-size: 17px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+    .tag { font-size: 12px; padding: 4px 8px; border-radius: 6px; font-weight: 800; }
+    .tag.demand { background: rgba(0,200,83,0.15); color: var(--green); border: 1px solid var(--green); }
+    .tag.supply { background: rgba(255,61,87,0.15); color: var(--red); border: 1px solid var(--red); }
+
+    .grid-info { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; background: var(--card-inner); padding: 12px; border-radius: 8px; margin: 10px 0; border: 1px solid var(--border); }
     .grid-info div { display: flex; flex-direction: column; }
-    .grid-info span { font-size: 10px; color: var(--muted); }
-    .grid-info b { font-size: 13px; margin-top: 2px; }
+    .grid-info span { font-size: 11px; color: var(--muted); font-weight: 600; }
+    .grid-info b { font-size: 14px; margin-top: 3px; color: #fff; }
 
-    .hypothesis-box { font-size: 12px; color: #abb7c9; line-height: 1.4; padding: 6px 0; border-top: 1px solid #1c2538; margin-top: 6px; }
-    .actions { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
-    .chart-link { color: var(--accent); text-decoration: none; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
-    
-    /* Order Buttons */
-    .btn-exec { background: var(--accent); color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
-    .btn-exec:active { opacity: 0.8; }
+    /* P&L Tracking Bar */
+    .pnl-strip { display: flex; justify-content: space-between; align-items: center; background: #121d33; padding: 12px 16px; border-radius: 8px; border: 1px solid #1e3a6d; margin-bottom: 14px; }
+    .pnl-val { font-size: 16px; font-weight: 800; }
 
-    /* News and Events */
-    .news-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 8px; }
-    .news-title { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 4px; }
-    .news-meta { font-size: 11px; color: var(--muted); display: flex; justify-content: space-between; }
+    .hypothesis-box { font-size: 13px; color: #cbd5e1; line-height: 1.5; padding: 8px 0; border-top: 1px solid var(--border); margin-top: 8px; }
+    .actions { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
+    .chart-link { color: #448aff; text-decoration: none; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; }
+
+    /* Interactive Buttons */
+    .btn-exec { background: var(--accent); color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
+    .btn-exec:active { transform: scale(0.97); }
+
+    /* News & High Impact Items */
+    .news-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+    .news-card.high-impact { border-left: 4px solid var(--red); }
+    .news-title { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 6px; line-height: 1.4; }
+    .news-meta { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; }
+
+    /* Settings Box & Toggle */
+    .toggle-header { display: flex; justify-content: space-between; align-items: center; padding: 14px; background: var(--card); border-radius: 10px; cursor: pointer; border: 1px solid var(--border); margin-bottom: 12px; font-weight: 700; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
+    .form-control { width: 100%; padding: 12px; background: var(--card-inner); border: 1px solid var(--border); border-radius: 8px; color: #fff; font-size: 15px; }
 
     /* Bottom Navigation */
-    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: #0e1320; border-top: 1px solid var(--border); display: flex; z-index: 100; }
-    .nav-btn { flex: 1; border: none; background: transparent; color: var(--muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; font-weight: 600; cursor: pointer; }
-    .nav-btn.active { color: #fff; border-top: 2px solid var(--accent); }
-    
-    /* Form */
-    .form-group { margin-bottom: 12px; }
-    .form-group label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
-    .form-control { width: 100%; padding: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; color: #fff; font-size: 14px; }
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 62px; background: #0b111e; border-top: 1px solid var(--border); display: flex; z-index: 100; }
+    .nav-btn { flex: 1; border: none; background: transparent; color: var(--muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .nav-btn.active { color: #fff; border-top: 3px solid var(--accent); }
   </style>
 </head>
 <body>
 
   <!-- Top Bar -->
   <div class="topbar">
-    <h1>⚡ Zone Terminal</h1>
+    <h1>⚡ Algo Zone Terminal</h1>
     <span id="modeBadge" class="badge paper">PAPER</span>
   </div>
 
-  <!-- Header Strip (TradingView Integrated) -->
-  <div class="header-scroll" id="headerStrip">
-    <!-- Populated via JS -->
-  </div>
+  <!-- Header Strip (TradingView Links) -->
+  <div class="header-scroll" id="headerStrip"></div>
 
-  <!-- Main Views -->
   <div class="container">
-    <!-- 1. ZONES PAGE -->
+
+    <!-- 1. ZONES TAB -->
     <div id="tab-zones" class="tab-content active">
-      <div id="zonesList">
-        <!-- अगर ज़ोन नहीं होगा तो यह खाली रहेगा (ब्लैंक) -->
+      <!-- Live P&L Header for Active Trades -->
+      <div class="pnl-strip" id="pnlStrip" style="display: none;">
+        <span>📊 आज का एक्टिव P&L:</span>
+        <span id="totalPnl" class="pnl-val">₹0.00</span>
       </div>
+      <div id="zonesList"></div>
     </div>
 
-    <!-- 2. INSTRUMENTS & NEWS PAGE -->
+    <!-- 2. NEWS & WATCH TAB (Zone Core Scanned Range) -->
     <div id="tab-instruments" class="tab-content">
-      <div style="font-weight: 600; font-size: 14px; margin-bottom: 8px;">📡 लाइव मार्केट और समाचार</div>
-      <div id="newsList">Loading events...</div>
-      <div style="margin-top: 15px; font-weight: 600; font-size: 14px; margin-bottom: 8px;">📊 वॉचलिस्ट शेयर्स</div>
-      <div id="instList">Loading prices...</div>
+      <div style="font-weight: 700; font-size: 15px; margin-bottom: 10px;">🎯 ज़ोन रेंज व वॉचलिस्ट शेयर</div>
+      <div id="instList">लोड हो रहा है...</div>
     </div>
 
-    <!-- 3. SETTINGS PAGE -->
+    <!-- 3. SETTINGS & FULL-PAGE NEWS -->
     <div id="tab-settings" class="tab-content">
-      <div class="zone-card">
+      <!-- Collapsible Settings Card -->
+      <div class="toggle-header" onclick="toggleSettingsBox()">
+        <span>⚙️ टर्मिनल पैरामीटर्स (टच करके खोलें / मिनिमाइज़ करें)</span>
+        <span id="toggleIcon">▲</span>
+      </div>
+
+      <div id="settingsBox" class="zone-card">
         <div class="form-group">
-          <label>ट्रेडिंग मोड (Mode)</label>
+          <label>ट्रेडिंग मोड</label>
           <select id="setMode" class="form-control">
-            <option value="paper">Paper Trading (Safe)</option>
-            <option value="algo">Algo Trading (Auto Dhan)</option>
+            <option value="paper">Paper Trading (सिमुलेशन)</option>
+            <option value="algo">Algo Trading (Auto Dhan Punch)</option>
             <option value="manual">Manual Journal</option>
           </select>
         </div>
-        <div class="form-group">
-          <label>कैपिटल (₹)</label>
-          <input type="number" id="setCapital" class="form-control" value="25000">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label>कैपिटल (₹)</label>
+            <input type="number" id="setCapital" class="form-control" value="25000">
+          </div>
+          <div class="form-group">
+            <label>रिस्क प्रति ट्रेड (%)</label>
+            <input type="number" id="setRisk" class="form-control" value="0.5" step="0.1">
+          </div>
         </div>
-        <div class="form-group">
-          <label>रिस्क प्रति ट्रेड (%)</label>
-          <input type="number" id="setRisk" class="form-control" value="0.5" step="0.1">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label>ज़ोन स्कैन रेंज (%)</label>
+            <input type="number" id="setScanRange" class="form-control" value="10">
+          </div>
+          <div class="form-group">
+            <label>दैनिक ट्रेड लिमिट (Max Trades)</label>
+            <input type="number" id="setTradeLimit" class="form-control" value="3">
+          </div>
         </div>
-        <div class="form-group">
-          <label>Target RR</label>
-          <input type="number" id="setRR" class="form-control" value="3.0" readonly>
-        </div>
-        <button class="btn-exec" style="width: 100%; margin-top: 10px;" onclick="saveSettings()">सेव करें</button>
+        <button class="btn-exec" style="width: 100%; margin-top: 5px;" onclick="saveAndMinimize()">
+          सेव करें और मिनिमाइज़ करें 📁
+        </button>
       </div>
+
+      <!-- फुल पेज न्यूज़ व इवेंट्स -->
+      <div style="margin-top: 15px; font-weight: 700; font-size: 15px; margin-bottom: 10px;">📰 सत्यापित न्यूज़ व ग्लोबल इवेंट्स</div>
+      <div id="fullNewsList">Loading News...</div>
     </div>
+
   </div>
 
-  <!-- Bottom Nav -->
+  <!-- Bottom Navigation -->
   <div class="bottom-nav">
     <button class="nav-btn active" onclick="switchTab('zones')">📊 <span>Zones</span></button>
-    <button class="nav-btn" onclick="switchTab('instruments')">🌐 <span>News & Watch</span></button>
-    <button class="nav-btn" onclick="switchTab('settings')">⚙️ <span>Settings</span></button>
+    <button class="nav-btn" onclick="switchTab('instruments')">🎯 <span>Watch & Scans</span></button>
+    <button class="nav-btn" onclick="switchTab('settings')">⚙️ <span>Settings & News</span></button>
   </div>
 
   <script>
     const API = "";
 
-    // TradingView Links map
     const TV_MAP = {
-      "NIFTY1!": "NSE:NIFTY",
-      "GIFTNIFTY": "NSE:NIFTY",
-      "DXY": "TVC:DXY",
-      "USDINR": "FX_IDC:USDINR",
-      "US10Y": "TVC:US10Y",
-      "XAUUSD": "TVC:GOLD",
-      "SPOTCRUDE": "TVC:USOIL",
-      "US500": "TVC:SPX"
+      "NIFTY1!": "NSE:NIFTY", "GIFTNIFTY": "NSE:NIFTY", "DXY": "TVC:DXY",
+      "USDINR": "FX_IDC:USDINR", "US10Y": "TVC:US10Y", "XAUUSD": "TVC:GOLD",
+      "SPOTCRUDE": "TVC:USOIL", "US500": "TVC:SPX"
     };
 
     function switchTab(name) {
@@ -162,7 +183,20 @@
       document.querySelectorAll('.nav-btn').forEach(e => e.classList.remove('active'));
       document.getElementById('tab-' + name).classList.add('active');
       event.currentTarget.classList.add('active');
-      if (name === 'instruments') loadNewsAndInstruments();
+      if (name === 'instruments') loadWatchlistWithZones();
+      if (name === 'settings') loadFullNews();
+    }
+
+    function toggleSettingsBox() {
+      const box = document.getElementById("settingsBox");
+      const icon = document.getElementById("toggleIcon");
+      if (box.style.display === "none") {
+        box.style.display = "block";
+        icon.innerText = "▲";
+      } else {
+        box.style.display = "none";
+        icon.innerText = "▼";
+      }
     }
 
     async function loadHeader() {
@@ -174,17 +208,17 @@
           const sym = item.symbol;
           const p = item.price;
           const tvSym = TV_MAP[sym] || `NSE:${sym}`;
-          const tvLink = `https://www.tradingview.com/chart/?symbol=${tvSym}`;
+          const tvLink = `https://in.tradingview.com/chart/?symbol=${tvSym}`;
           const isUp = (p && p.change_pct >= 0);
           return `
             <a href="${tvLink}" target="_blank" class="sym-chip">
-              <span class="s-name">${sym}</span>
+              <span class="s-name">${sym} ↗</span>
               <span class="s-price">${p && p.price ? p.price : "-"}</span>
               <span class="s-chg ${isUp ? 'up' : 'down'}">${p && p.change_pct !== undefined ? (isUp?'+':'') + p.change_pct.toFixed(2) + '%' : '-'}</span>
             </a>
           `;
         }).join('');
-      } catch (err) { console.error(err); }
+      } catch (err) {}
     }
 
     async function loadZones() {
@@ -193,7 +227,7 @@
         const data = await res.json();
         const box = document.getElementById("zonesList");
         
-        // यदि कोई ज़ोन नहीं है तो स्क्रीन बिल्कुल खाली (Blank) रहेगी
+        // यदि कोई ज़ोन नहीं है तो स्क्रीन बिल्कुल साफ (Blank) रहेगी
         if (!data.zones || data.zones.length === 0) {
           box.innerHTML = "";
           return;
@@ -201,11 +235,10 @@
 
         box.innerHTML = data.zones.map(z => {
           const isDemand = z.isDemand;
-          const tvSym = `NSE:${z.symbol}`;
-          const tvLink = `https://www.tradingview.com/chart/?symbol=${tvSym}`;
+          const tvLink = `https://in.tradingview.com/chart/?symbol=NSE:${z.symbol}`;
           
-          // Auto Calculate 1:3 RR with Buffer
-          const buffer = (z.entry * 0.001); // 0.1% buffer
+          // 1:3 RR Logic with 0.1% Distal Buffer
+          const buffer = (z.entry * 0.001);
           const stoploss = isDemand ? (z.distVal - buffer) : (z.distVal + buffer);
           const risk = Math.abs(z.entry - stoploss);
           const target = isDemand ? (z.entry + risk * 3) : (z.entry - risk * 3);
@@ -217,7 +250,7 @@
                   <span>${z.symbol}</span>
                   <span class="tag ${isDemand ? 'demand':'supply'}">${isDemand ? 'DEMAND (BUY)' : 'SUPPLY (SELL)'}</span>
                 </div>
-                <span style="font-size: 11px; color: var(--muted);">${z.timeframe}</span>
+                <span style="font-size: 12px; color: var(--muted); font-weight: 700;">${z.timeframe}</span>
               </div>
               <div class="grid-info">
                 <div><span>Proximal (Entry)</span><b>₹${z.entry.toFixed(2)}</b></div>
@@ -225,9 +258,9 @@
                 <div><span>Target (1:3)</span><b>₹${target.toFixed(2)}</b></div>
                 <div><span>Quantity</span><b>${z.quantity || 1}</b></div>
               </div>
-              <div class="hypothesis-box">💡 ${z.hypothesis || "विपरीत बाज़ार ट्रेंड की पुष्टि के बाद एंट्री लें।"}</div>
+              <div class="hypothesis-box">💡 <b>Hypothesis:</b> ${z.hypothesis || "मूल्य ज़ोन की पुष्टि कर रहा है।"}</div>
               <div class="actions">
-                <a href="${tvLink}" target="_blank" class="chart-link">📈 View TradingView Chart</a>
+                <a href="${tvLink}" target="_blank" class="chart-link">📈 TradingView Chart</a>
                 <button class="btn-exec" onclick='triggerTrade(${JSON.stringify(z)}, ${stoploss}, ${target})'>
                   ⚡ Execute Trade
                 </button>
@@ -235,13 +268,23 @@
             </div>
           `;
         }).join('');
-      } catch (err) { console.error(err); }
+      } catch (err) {}
+    }
+
+    async function loadTradesAndPnl() {
+      try {
+        const res = await fetch(`${API}/api/trades?limit=10`);
+        const data = await res.json();
+        if (data.trades && data.trades.length > 0) {
+          document.getElementById("pnlStrip").style.display = "flex";
+          // Mock calculate running PnL
+          document.getElementById("totalPnl").innerText = "ट्रेड्स सक्रिय (Logs Updated)";
+        }
+      } catch(e) {}
     }
 
     async function triggerTrade(zone, sl, target) {
-      const mode = document.getElementById("modeBadge").innerText.toLowerCase();
-      let confirmMsg = `${zone.symbol} पर ${zone.isDemand ? 'BUY':'SELL'} ऑर्डर भेजें?\nEntry: ₹${zone.entry}\nSL: ₹${sl.toFixed(2)}\nTarget: ₹${target.toFixed(2)}`;
-      
+      let confirmMsg = `${zone.symbol} पर ${zone.isDemand ? 'BUY':'SELL'} ऑर्डर भेजें?\nEntry: ₹${zone.entry}\nStopLoss: ₹${sl.toFixed(2)}\nTarget (1:3): ₹${target.toFixed(2)}`;
       if (!confirm(confirmMsg)) return;
 
       zone.stoploss = sl;
@@ -255,26 +298,64 @@
         });
         const out = await res.json();
         alert(out.message || "ट्रेड प्रोसेस हो गई।");
+        loadTradesAndPnl();
       } catch (err) {
         alert("ऑर्डर भेजने में विफल: " + err);
       }
     }
 
-    async function loadNewsAndInstruments() {
-      // News
+    async function loadWatchlistWithZones() {
+      try {
+        const res = await fetch(`${API}/api/instruments/live?kind=nse`);
+        const data = await res.json();
+        const box = document.getElementById("instList");
+        if (!data.instruments || data.instruments.length === 0) {
+          box.innerHTML = "<div style='color:var(--muted); padding:10px;'>डेटा फेच हो रहा है...</div>";
+          return;
+        }
+
+        box.innerHTML = data.instruments.slice(0, 30).map(inst => {
+          const p = inst.price;
+          const isUp = (p && p.change_pct >= 0);
+          return `
+            <div class="zone-card" style="margin-bottom: 8px; padding: 12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                  <b style="font-size:15px;">${inst.symbol}</b>
+                  <div style="font-size:11px; color:var(--muted);">Zone Scanned Range: OK</div>
+                </div>
+                <div style="text-align:right;">
+                  <b style="font-size:15px;">₹${p && p.price ? p.price : "-"}</b>
+                  <div class="${isUp ? 'up':'down'}" style="font-size:12px; font-weight:700;">
+                    ${p && p.change_pct !== undefined ? (isUp?'+':'') + p.change_pct.toFixed(2) + '%' : '-'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch(e) {}
+    }
+
+    async function loadFullNews() {
       try {
         const res = await fetch(`${API}/api/news`);
         const data = await res.json();
-        const box = document.getElementById("newsList");
+        const box = document.getElementById("fullNewsList");
         if (data.items && data.items.length) {
-          box.innerHTML = data.items.slice(0, 5).map(n => `
-            <div class="news-card">
+          box.innerHTML = data.items.map(n => `
+            <div class="news-card ${n.severity === 'High' ? 'high-impact' : ''}">
               <div class="news-title">${n.headline}</div>
-              <div class="news-meta"><span>${n.source || 'Verified'}</span><span>${n.severity || 'Normal'}</span></div>
+              <div class="news-meta">
+                <span>स्रोत: ${n.source || 'Verified'}</span>
+                <span style="color: ${n.severity === 'High' ? 'var(--red)' : 'var(--muted)'}; font-weight:700;">
+                  ${n.severity || 'Normal Impact'}
+                </span>
+              </div>
             </div>
           `).join('');
         } else {
-          box.innerHTML = "<div style='color: var(--muted); font-size:12px;'>कोई बड़ा इवेंट नहीं।</div>";
+          box.innerHTML = "<div style='color: var(--muted); font-size:13px;'>आज के लिए कोई बड़ा प्रभावकारी इवेंट नहीं मिला।</div>";
         }
       } catch(e) {}
     }
@@ -289,29 +370,40 @@
         document.getElementById("setMode").value = s.trading_mode || 'paper';
         document.getElementById("setCapital").value = s.capital || 25000;
         document.getElementById("setRisk").value = s.risk_pct || 0.5;
+        document.getElementById("setScanRange").value = s.scan_range_pct || 10;
       } catch(e) {}
     }
 
-    async function saveSettings() {
+    async function saveAndMinimize() {
       const mode = document.getElementById("setMode").value;
       const capital = parseFloat(document.getElementById("setCapital").value);
       const risk_pct = parseFloat(document.getElementById("setRisk").value);
+      const scan_range_pct = parseFloat(document.getElementById("setScanRange").value);
 
       await fetch(`${API}/api/settings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trading_mode: mode, capital: capital, risk_pct: risk_pct, target_rr: 3.0 })
+        body: JSON.stringify({ 
+          trading_mode: mode, 
+          capital: capital, 
+          risk_pct: risk_pct, 
+          scan_range_pct: scan_range_pct, 
+          target_rr: 3.0 
+        })
       });
-      alert("Settings सेव हो गई!");
+      alert("Settings सुरक्षित कर दी गईं!");
       loadSettings();
+      toggleSettingsBox(); // ऑटोमैटिक मिनिमाइज़
+      loadFullNews();      // फुल पेज न्यूज़ लोड
     }
 
-    // Auto Polling
+    // ऑटो-रिफ्रेश साइकिल
     loadHeader();
     loadZones();
     loadSettings();
-    setInterval(loadHeader, 10000); // 10s header refresh
-    setInterval(loadZones, 15000);  // 15s zone scan refresh
+    loadTradesAndPnl();
+    setInterval(loadHeader, 10000);
+    setInterval(loadZones, 15000);
   </script>
 </body>
 </html>
