@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: zone-trading-terminal
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DHAN_CLIENT_ID
+        sync: false
+      - key: DHAN_ACCESS_TOKEN
+        sync: false
+      - key: NEWSAPI_KEY
+        sync: false
+      - key: GNEWS_KEY
+        sync: false
+      - key: MARKETAUX_KEY
+        sync: false
+      - key: OPENROUTER_KEY
+        sync: false
+      - key: GROQ_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
