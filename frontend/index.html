@@ -1,413 +1,317 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Zone Trading Terminal</title>
-<style>
-  :root {
-    --bg: #0d1117; --panel: #161b22; --border: #30363d;
-    --text: #e6edf3; --muted: #8b949e;
-    --green: #3fb950; --red: #f85149; --accent: #58a6ff;
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; background: var(--bg); color: var(--text);
-    font-family: -apple-system, "Segoe UI", Roboto, "Noto Sans Devanagari", sans-serif;
-    -webkit-font-smoothing: antialiased;
-  }
-  header.topbar {
-    position: sticky; top: 0; z-index: 10;
-    padding: env(safe-area-inset-top, 0px) 0 0 0;
-    background: var(--panel); border-bottom: 1px solid var(--border);
-  }
-  #headerStrip {
-    display: flex; overflow-x: auto; gap: 14px; padding: 8px 12px;
-    white-space: nowrap; font-size: 12px;
-  }
-  #headerStrip .item { display: flex; flex-direction: column; min-width: 72px; }
-  #headerStrip .sym { color: var(--muted); font-size: 10px; }
-  #headerStrip .chg.up { color: var(--green); }
-  #headerStrip .chg.down { color: var(--red); }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Zone Trading Terminal</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card: #151b2b;
+      --border: #222d42;
+      --accent: #2962ff;
+      --green: #089981;
+      --red: #f23645;
+      --text: #e0e3eb;
+      --muted: #848e9c;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding-bottom: 75px; -webkit-tap-highlight-color: transparent; }
+    
+    /* Top Bar */
+    .topbar { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #0f1523; border-bottom: 1px solid var(--border); }
+    .topbar h1 { font-size: 18px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px; }
+    .badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: 600; text-transform: uppercase; }
+    .badge.paper { background: #2a3b5c; color: #64b5f6; }
+    .badge.algo { background: #4a1525; color: #ff5252; }
 
-  .appTitle { display:flex; align-items:center; justify-content:space-between; padding: 8px 12px 0; }
-  .appTitle h1 { font-size: 16px; margin: 0; font-weight: 600; }
-  .modeBadge {
-    font-size: 11px; padding: 3px 8px; border-radius: 12px; border: 1px solid var(--border);
-  }
-  .modeBadge.paper { color: var(--accent); }
-  .modeBadge.algo { color: var(--red); border-color: var(--red); }
+    /* Header Strip - Clickable TradingView */
+    .header-scroll { overflow-x: auto; white-space: nowrap; display: flex; gap: 8px; padding: 10px 14px; background: #121826; border-bottom: 1px solid var(--border); }
+    .header-scroll::-webkit-scrollbar { display: none; }
+    .sym-chip { display: inline-flex; flex-direction: column; background: var(--card); border: 1px solid var(--border); padding: 6px 12px; border-radius: 8px; text-decoration: none; min-width: 95px; }
+    .sym-chip .s-name { font-size: 11px; color: var(--muted); font-weight: 600; }
+    .sym-chip .s-price { font-size: 13px; font-weight: bold; color: #fff; margin-top: 2px; }
+    .sym-chip .s-chg { font-size: 11px; font-weight: 600; }
+    .up { color: var(--green) !important; }
+    .down { color: var(--red) !important; }
 
-  nav.tabs { display: flex; border-bottom: 1px solid var(--border); }
-  nav.tabs button {
-    flex: 1; background: none; border: none; color: var(--muted);
-    padding: 10px 0; font-size: 13px; border-bottom: 2px solid transparent;
-  }
-  nav.tabs button.active { color: var(--text); border-bottom-color: var(--accent); }
+    /* Container & Tabs */
+    .container { padding: 14px; max-width: 1000px; margin: 0 auto; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
 
-  main { padding: 10px 10px calc(70px + env(safe-area-inset-bottom, 0px)); }
-  .page { display: none; }
-  .page.active { display: block; }
+    /* Zone Card */
+    .zone-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 12px; position: relative; }
+    .zone-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .zone-title { font-size: 16px; font-weight: bold; display: flex; align-items: center; gap: 8px; }
+    .tag { font-size: 11px; padding: 3px 6px; border-radius: 4px; font-weight: bold; }
+    .tag.demand { background: rgba(8,153,129,0.15); color: var(--green); border: 1px solid var(--green); }
+    .tag.supply { background: rgba(242,54,69,0.15); color: var(--red); border: 1px solid var(--red); }
+    
+    .grid-info { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; background: #0f1524; padding: 10px; border-radius: 6px; margin: 8px 0; }
+    .grid-info div { display: flex; flex-direction: column; }
+    .grid-info span { font-size: 10px; color: var(--muted); }
+    .grid-info b { font-size: 13px; margin-top: 2px; }
 
-  .card {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
-    padding: 10px 12px; margin-bottom: 8px;
-  }
-  .zoneRow .top { display: flex; justify-content: space-between; align-items: center; }
-  .zoneRow .symbol { font-weight: 600; font-size: 14px; }
-  .tag { font-size: 10px; padding: 2px 7px; border-radius: 6px; }
-  .tag.demand { background: rgba(63,185,80,0.15); color: var(--green); }
-  .tag.supply { background: rgba(248,81,73,0.15); color: var(--red); }
-  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 6px; font-size: 11px; }
-  .grid4 .label { color: var(--muted); }
-  .hypothesis { margin-top: 6px; font-size: 12px; color: var(--text); line-height: 1.4; }
-  .conflict-warn { margin-top: 6px; font-size: 11px; color: var(--red); }
-  a.chartlink { font-size: 11px; color: var(--accent); text-decoration: none; }
-  .execBtn {
-    margin-left: auto; font-size: 11px; padding: 5px 10px; border-radius: 6px;
-    border: 1px solid var(--accent); background: none; color: var(--accent);
-  }
-  .execBtn:active { background: var(--accent); color: #001; }
+    .hypothesis-box { font-size: 12px; color: #abb7c9; line-height: 1.4; padding: 6px 0; border-top: 1px solid #1c2538; margin-top: 6px; }
+    .actions { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+    .chart-link { color: var(--accent); text-decoration: none; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+    
+    /* Order Buttons */
+    .btn-exec { background: var(--accent); color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-exec:active { opacity: 0.8; }
 
-  .instRow { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
-  .instRow:last-child { border-bottom: none; }
-  .instRow .name { font-size: 13px; }
-  .instRow .price { font-size: 13px; text-align: right; }
+    /* News and Events */
+    .news-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+    .news-title { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+    .news-meta { font-size: 11px; color: var(--muted); display: flex; justify-content: space-between; }
 
-  .settingsForm label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
-  .settingsForm input, .settingsForm select {
-    width: 100%; padding: 8px; background: #0d1117; border: 1px solid var(--border);
-    color: var(--text); border-radius: 6px; font-size: 14px;
-  }
-  .settingsForm button {
-    margin-top: 14px; width: 100%; padding: 10px; background: var(--accent);
-    color: #001; border: none; border-radius: 8px; font-weight: 600;
-  }
-
-  .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 30px 0; }
-  #notifBar {
-    position: fixed; bottom: calc(56px + env(safe-area-inset-bottom, 0px)); left: 0; right: 0;
-    background: #1f2937; border-top: 1px solid var(--border);
-    font-size: 11px; padding: 6px 10px; overflow-x: auto; white-space: nowrap; display: none;
-  }
-  #notifBar.show { display: block; }
-  footer.tabbar {
-    position: fixed; bottom: 0; left: 0; right: 0; z-index: 10;
-    display: flex; background: var(--panel); border-top: 1px solid var(--border);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-  footer.tabbar button { flex: 1; background: none; border: none; color: var(--muted); padding: 10px 0; font-size: 12px; }
-  footer.tabbar button.active { color: var(--accent); }
-</style>
+    /* Bottom Navigation */
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: #0e1320; border-top: 1px solid var(--border); display: flex; z-index: 100; }
+    .nav-btn { flex: 1; border: none; background: transparent; color: var(--muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; font-weight: 600; cursor: pointer; }
+    .nav-btn.active { color: #fff; border-top: 2px solid var(--accent); }
+    
+    /* Form */
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+    .form-control { width: 100%; padding: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; color: #fff; font-size: 14px; }
+  </style>
 </head>
 <body>
 
-<header class="topbar">
-  <div class="appTitle">
+  <!-- Top Bar -->
+  <div class="topbar">
     <h1>⚡ Zone Terminal</h1>
-    <span id="modeBadge" class="modeBadge paper">PAPER</span>
+    <span id="modeBadge" class="badge paper">PAPER</span>
   </div>
-  <div id="headerStrip"></div>
-</header>
 
-<main>
-  <section id="page-home" class="page active">
-    <div id="zonesList"><div class="empty">Scanning शुरू हो रहा है...</div></div>
-  </section>
+  <!-- Header Strip (TradingView Integrated) -->
+  <div class="header-scroll" id="headerStrip">
+    <!-- Populated via JS -->
+  </div>
 
-  <section id="page-instruments" class="page">
-    <div class="card">
-      <div id="instrumentsList"><div class="empty">Loading...</div></div>
-    </div>
-  </section>
-
-  <section id="page-settings" class="page">
-    <div class="card settingsForm">
-      <label>Trading Mode</label>
-      <select id="tradingMode">
-        <option value="paper">Paper</option>
-        <option value="manual">Manual</option>
-        <option value="algo">Algo</option>
-      </select>
-
-      <label>Capital (₹)</label>
-      <input id="capital" type="number" step="100">
-
-      <label>Risk per trade (%)</label>
-      <input id="riskPct" type="number" step="0.1">
-
-      <label>Target RR</label>
-      <input id="targetRR" type="number" step="0.5">
-
-      <label>Scan Range (± % of EOD high/low)</label>
-      <input id="scanRange" type="number" step="1">
-
-      <label>Proximal Alert (%)</label>
-      <input id="proximalPct" type="number" step="0.1">
-
-      <button onclick="saveSettings()">सेव करें</button>
-    </div>
-
-    <div class="card">
-      <div style="font-size:13px; font-weight:600; margin-bottom:6px;">Data Sources</div>
-      <div id="sourcesStatus" style="font-size:12px; color:var(--muted);">Loading...</div>
-    </div>
-
-    <div class="card">
-      <div style="font-size:13px; font-weight:600; margin-bottom:6px;">FII/DII (पिछले 3 दिन)</div>
-      <div id="fiiDii" style="font-size:12px;">Loading...</div>
-    </div>
-
-    <div class="card">
-      <div style="font-size:13px; font-weight:600; margin-bottom:6px;">News / Events</div>
-      <div id="newsList" style="font-size:12px;">Loading...</div>
-    </div>
-
-    <div class="card">
-      <div style="font-size:13px; font-weight:600; margin-bottom:6px;">Trade History (Paper/Manual/Algo)</div>
-      <div id="tradeHistory" style="font-size:12px;">Loading...</div>
-    </div>
-  </section>
-</main>
-
-<div id="notifBar"></div>
-
-<footer class="tabbar">
-  <button data-page="home" class="active" onclick="showPage('home')">📊 Zones</button>
-  <button data-page="instruments" onclick="showPage('instruments')">🌐 Instruments</button>
-  <button data-page="settings" onclick="showPage('settings')">⚙️ Settings</button>
-</footer>
-
-<script>
-const API = ""; // same-origin; change to your backend URL if hosted separately
-
-function showPage(name) {
-  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-  document.getElementById("page-" + name).classList.add("active");
-  document.querySelectorAll("footer.tabbar button").forEach(b => b.classList.remove("active"));
-  document.querySelector(`footer.tabbar button[data-page="${name}"]`).classList.add("active");
-}
-
-async function safeFetch(url) {
-  try {
-    const r = await fetch(API + url);
-    if (!r.ok) return null;
-    return await r.json();
-  } catch (e) { return null; }
-}
-
-async function loadHeaderStrip() {
-  const data = await safeFetch("/api/instruments/header");
-  const el = document.getElementById("headerStrip");
-  if (!data) { el.innerHTML = '<span class="empty">Header data unavailable</span>'; return; }
-  el.innerHTML = data.header.map(h => {
-    const p = h.price;
-    const ok = p && p.ok;
-    const chgCls = ok && p.change_pct >= 0 ? "up" : "down";
-    return `<div class="item">
-      <span class="sym">${h.symbol}</span>
-      <span>${ok ? p.price : "—"}</span>
-      <span class="chg ${chgCls}">${ok ? (p.change_pct >= 0 ? "+" : "") + p.change_pct + "%" : "N/A"}</span>
-    </div>`;
-  }).join("");
-}
-
-async function loadZones() {
-  const data = await safeFetch("/api/zones?eligible_only=true");
-  const el = document.getElementById("zonesList");
-  if (!data || data.count === 0) {
-    el.innerHTML = '<div class="empty">अभी कोई वैलिड zone नहीं मिला। (candle source अभी backend में wire नहीं हुआ है, देखें README)</div>';
-    return;
-  }
-  el.innerHTML = data.zones.map(z => `
-    <div class="card zoneRow">
-      <div class="top">
-        <span class="symbol">${z.symbol} <span style="color:var(--muted);font-weight:400;">(${z.timeframe})</span></span>
-        <span class="tag ${z.isDemand ? "demand" : "supply"}">${z.isDemand ? "D" : "S"}</span>
-      </div>
-      <div class="grid4">
-        <div><div class="label">Entry</div>${z.entry}</div>
-        <div><div class="label">SL</div>${z.stopLoss}</div>
-        <div><div class="label">Target</div>${z.target}</div>
-        <div><div class="label">Qty</div>${z.quantity}</div>
-      </div>
-      <div class="hypothesis">🧠 ${z.hypothesis || ""}</div>
-      ${z.nifty_conflict && z.nifty_conflict.conflict ? '<div class="conflict-warn">⚠️ Nifty 50 में विपरीत ज़ोन सक्रिय है</div>' : ""}
-      <div style="display:flex; gap:8px; margin-top:8px; align-items:center;">
-        ${z.tradingview_link ? `<a class="chartlink" href="${z.tradingview_link}" target="_blank">TradingView चार्ट →</a>` : ""}
-        <button class="execBtn" onclick='executeTrade(${JSON.stringify(z).replace(/'/g, "&apos;")})'>ट्रेड लें</button>
+  <!-- Main Views -->
+  <div class="container">
+    <!-- 1. ZONES PAGE -->
+    <div id="tab-zones" class="tab-content active">
+      <div id="zonesList">
+        <!-- अगर ज़ोन नहीं होगा तो यह खाली रहेगा (ब्लैंक) -->
       </div>
     </div>
-  `).join("");
-}
 
-async function loadInstruments() {
-  const data = await safeFetch("/api/instruments/live");
-  const el = document.getElementById("instrumentsList");
-  if (!data) { el.innerHTML = '<div class="empty">Unavailable</div>'; return; }
-  el.innerHTML = data.instruments.map(i => {
-    const p = i.price; const ok = p && p.ok;
-    const cls = ok && p.change_pct >= 0 ? "up" : "down";
-    return `<div class="instRow">
-      <span class="name">${i.symbol}</span>
-      <span class="price">
-        ${ok ? p.price : "—"}
-        <span class="chg ${cls}" style="margin-left:6px;">${ok ? (p.change_pct>=0?"+":"")+p.change_pct+"%" : "N/A"}</span>
-        ${i.tradingview_link ? `<a class="chartlink" href="${i.tradingview_link}" target="_blank" style="margin-left:8px;">📈</a>` : ""}
-      </span>
-    </div>`;
-  }).join("");
-}
+    <!-- 2. INSTRUMENTS & NEWS PAGE -->
+    <div id="tab-instruments" class="tab-content">
+      <div style="font-weight: 600; font-size: 14px; margin-bottom: 8px;">📡 लाइव मार्केट और समाचार</div>
+      <div id="newsList">Loading events...</div>
+      <div style="margin-top: 15px; font-weight: 600; font-size: 14px; margin-bottom: 8px;">📊 वॉचलिस्ट शेयर्स</div>
+      <div id="instList">Loading prices...</div>
+    </div>
 
-async function loadSettings() {
-  const data = await safeFetch("/api/settings");
-  if (!data) return;
-  document.getElementById("tradingMode").value = data.trading_mode;
-  document.getElementById("capital").value = data.capital;
-  document.getElementById("riskPct").value = data.risk_pct;
-  document.getElementById("targetRR").value = data.target_rr;
-  document.getElementById("scanRange").value = data.scan_range_pct;
-  document.getElementById("proximalPct").value = data.proximal_alert_pct;
+    <!-- 3. SETTINGS PAGE -->
+    <div id="tab-settings" class="tab-content">
+      <div class="zone-card">
+        <div class="form-group">
+          <label>ट्रेडिंग मोड (Mode)</label>
+          <select id="setMode" class="form-control">
+            <option value="paper">Paper Trading (Safe)</option>
+            <option value="algo">Algo Trading (Auto Dhan)</option>
+            <option value="manual">Manual Journal</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>कैपिटल (₹)</label>
+          <input type="number" id="setCapital" class="form-control" value="25000">
+        </div>
+        <div class="form-group">
+          <label>रिस्क प्रति ट्रेड (%)</label>
+          <input type="number" id="setRisk" class="form-control" value="0.5" step="0.1">
+        </div>
+        <div class="form-group">
+          <label>Target RR</label>
+          <input type="number" id="setRR" class="form-control" value="3.0" readonly>
+        </div>
+        <button class="btn-exec" style="width: 100%; margin-top: 10px;" onclick="saveSettings()">सेव करें</button>
+      </div>
+    </div>
+  </div>
 
-  const badge = document.getElementById("modeBadge");
-  badge.textContent = data.trading_mode.toUpperCase();
-  badge.className = "modeBadge " + (data.trading_mode === "algo" ? "algo" : "paper");
+  <!-- Bottom Nav -->
+  <div class="bottom-nav">
+    <button class="nav-btn active" onclick="switchTab('zones')">📊 <span>Zones</span></button>
+    <button class="nav-btn" onclick="switchTab('instruments')">🌐 <span>News & Watch</span></button>
+    <button class="nav-btn" onclick="switchTab('settings')">⚙️ <span>Settings</span></button>
+  </div>
 
-  const sourcesEl = document.getElementById("sourcesStatus");
-  sourcesEl.innerHTML = Object.entries(data.sources).map(([k, v]) =>
-    `${v ? "✅" : "⬜"} ${k}`
-  ).join("<br>");
-}
+  <script>
+    const API = "";
 
-async function saveSettings() {
-  const body = {
-    trading_mode: document.getElementById("tradingMode").value,
-    capital: parseFloat(document.getElementById("capital").value),
-    risk_pct: parseFloat(document.getElementById("riskPct").value),
-    target_rr: parseFloat(document.getElementById("targetRR").value),
-    scan_range_pct: parseFloat(document.getElementById("scanRange").value),
-    proximal_alert_pct: parseFloat(document.getElementById("proximalPct").value),
-  };
-  try {
-    const r = await fetch(API + "/api/settings", {
-      method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)
-    });
-    if (r.ok) { alert("Settings सेव हो गईं"); loadSettings(); }
-    else { const err = await r.json(); alert("Error: " + (err.detail || r.status)); }
-  } catch (e) { alert("Network error: " + e); }
-}
-
-async function loadFiiDii() {
-  const data = await safeFetch("/api/fii-dii");
-  const el = document.getElementById("fiiDii");
-  if (!data || !data.ok) { el.innerHTML = "उपलब्ध नहीं"; return; }
-  el.innerHTML = data.rows.map(r => `${r.date} — ${r.category}: नेट ₹${r.net_value_cr} करोड़`).join("<br>")
-    + `<br><a class="chartlink" href="${data.stockedge_url}" target="_blank">StockEdge पर पूरा विवरण →</a>`;
-}
-
-async function loadNews() {
-  const data = await safeFetch("/api/news");
-  const el = document.getElementById("newsList");
-  if (!data || !data.items || data.items.length === 0) { el.innerHTML = "कोई सत्यापित न्यूज़ नहीं"; return; }
-  el.innerHTML = data.items.slice(0, 10).map(n =>
-    `<div style="margin-bottom:6px;">${n.verified ? "✅" : "🔹"} ${n.headline} <span style="color:var(--muted);">(${n.source})</span></div>`
-  ).join("");
-}
-
-async function loadProximalAlerts() {
-  const data = await safeFetch("/api/alerts/proximal");
-  const bar = document.getElementById("notifBar");
-  if (!data || data.count === 0) { bar.classList.remove("show"); return; }
-  bar.classList.add("show");
-  bar.innerHTML = data.alerts.map(a =>
-    `🔔 ${a.symbol} (${a.timeframe}) ${a.zone_type} zone ${a.distance_pct}% दूर`
-  ).join(" &nbsp;|&nbsp; ");
-}
-
-function showNotifBarFromAlerts(alerts) {
-  const bar = document.getElementById("notifBar");
-  if (!alerts || alerts.length === 0) { bar.classList.remove("show"); return; }
-  bar.classList.add("show");
-  bar.innerHTML = alerts.map(a =>
-    `🔔 ${a.symbol} (${a.timeframe}) ${a.zone_type} zone ${a.distance_pct}% दूर`
-  ).join(" &nbsp;|&nbsp; ");
-}
-
-async function executeTrade(setup) {
-  const mode = document.getElementById("tradingMode").value;
-  let confirm_flag = false;
-  if (mode === "algo") {
-    confirm_flag = window.confirm(
-      `${setup.symbol} पर असली ऑर्डर Dhan को भेजा जाएगा (Qty: ${setup.quantity}, Entry: ${setup.entry}).\nपक्का भेजें?`
-    );
-    if (!confirm_flag) return;
-  }
-  try {
-    const r = await fetch(API + "/api/execute", {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ setup, confirm: confirm_flag }),
-    });
-    const data = await r.json();
-    alert(data.message || (data.ok ? "हो गया" : "असफल"));
-    loadTradeHistory();
-  } catch (e) { alert("Network error: " + e); }
-}
-
-async function loadTradeHistory() {
-  const data = await safeFetch("/api/trades?limit=20");
-  const el = document.getElementById("tradeHistory");
-  if (!data || data.count === 0) { el.innerHTML = "अभी कोई ट्रेड लॉग नहीं"; return; }
-  el.innerHTML = data.trades.map(t => {
-    const s = t.setup || {};
-    return `<div style="margin-bottom:6px; border-bottom:1px solid var(--border); padding-bottom:4px;">
-      <b>${s.symbol || "?"}</b> — ${t.mode.toUpperCase()} — ${t.status}
-      <span style="color:var(--muted);"> (${new Date(t.logged_at).toLocaleString()})</span>
-    </div>`;
-  }).join("");
-}
-
-// --- WebSocket for real-time proximal alerts (falls back to the 15s
-// polling above if the socket can't connect, e.g. behind a proxy that
-// blocks websockets) ---
-function connectAlertsSocket() {
-  try {
-    const proto = location.protocol === "https:" ? "wss:" : "ws:";
-    const ws = new WebSocket(`${proto}//${location.host}/ws/alerts`);
-    ws.onmessage = (ev) => {
-      try {
-        const msg = JSON.parse(ev.data);
-        if (msg.type === "proximal_alerts") showNotifBarFromAlerts(msg.alerts);
-      } catch (e) { /* ignore malformed frame */ }
+    // TradingView Links map
+    const TV_MAP = {
+      "NIFTY1!": "NSE:NIFTY",
+      "GIFTNIFTY": "NSE:NIFTY",
+      "DXY": "TVC:DXY",
+      "USDINR": "FX_IDC:USDINR",
+      "US10Y": "TVC:US10Y",
+      "XAUUSD": "TVC:GOLD",
+      "SPOTCRUDE": "TVC:USOIL",
+      "US500": "TVC:SPX"
     };
-    ws.onclose = () => setTimeout(connectAlertsSocket, 5000); // auto-reconnect
-    ws.onerror = () => ws.close();
-  } catch (e) {
-    console.warn("WebSocket unavailable, relying on polling only:", e);
-  }
-}
 
-function refreshAll() {
-  loadHeaderStrip();
-  loadZones();
-  loadProximalAlerts();
-}
+    function switchTab(name) {
+      document.querySelectorAll('.tab-content').forEach(e => e.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(e => e.classList.remove('active'));
+      document.getElementById('tab-' + name).classList.add('active');
+      event.currentTarget.classList.add('active');
+      if (name === 'instruments') loadNewsAndInstruments();
+    }
 
-// Initial load
-loadHeaderStrip();
-loadZones();
-loadInstruments();
-loadSettings();
-loadFiiDii();
-loadNews();
-loadProximalAlerts();
-loadTradeHistory();
-connectAlertsSocket();
+    async function loadHeader() {
+      try {
+        const res = await fetch(`${API}/api/instruments/header`);
+        const data = await res.json();
+        const box = document.getElementById("headerStrip");
+        box.innerHTML = data.header.map(item => {
+          const sym = item.symbol;
+          const p = item.price;
+          const tvSym = TV_MAP[sym] || `NSE:${sym}`;
+          const tvLink = `https://www.tradingview.com/chart/?symbol=${tvSym}`;
+          const isUp = (p && p.change_pct >= 0);
+          return `
+            <a href="${tvLink}" target="_blank" class="sym-chip">
+              <span class="s-name">${sym}</span>
+              <span class="s-price">${p && p.price ? p.price : "-"}</span>
+              <span class="s-chg ${isUp ? 'up' : 'down'}">${p && p.change_pct !== undefined ? (isUp?'+':'') + p.change_pct.toFixed(2) + '%' : '-'}</span>
+            </a>
+          `;
+        }).join('');
+      } catch (err) { console.error(err); }
+    }
 
-// Poll every 15s for the live bits (header/zones) - WebSocket handles
-// proximal alerts in real time, but this stays as a safety-net refresh.
-setInterval(refreshAll, 15000);
-</script>
+    async function loadZones() {
+      try {
+        const res = await fetch(`${API}/api/zones?eligible_only=true`);
+        const data = await res.json();
+        const box = document.getElementById("zonesList");
+        
+        // यदि कोई ज़ोन नहीं है तो स्क्रीन बिल्कुल खाली (Blank) रहेगी
+        if (!data.zones || data.zones.length === 0) {
+          box.innerHTML = "";
+          return;
+        }
+
+        box.innerHTML = data.zones.map(z => {
+          const isDemand = z.isDemand;
+          const tvSym = `NSE:${z.symbol}`;
+          const tvLink = `https://www.tradingview.com/chart/?symbol=${tvSym}`;
+          
+          // Auto Calculate 1:3 RR with Buffer
+          const buffer = (z.entry * 0.001); // 0.1% buffer
+          const stoploss = isDemand ? (z.distVal - buffer) : (z.distVal + buffer);
+          const risk = Math.abs(z.entry - stoploss);
+          const target = isDemand ? (z.entry + risk * 3) : (z.entry - risk * 3);
+
+          return `
+            <div class="zone-card">
+              <div class="zone-head">
+                <div class="zone-title">
+                  <span>${z.symbol}</span>
+                  <span class="tag ${isDemand ? 'demand':'supply'}">${isDemand ? 'DEMAND (BUY)' : 'SUPPLY (SELL)'}</span>
+                </div>
+                <span style="font-size: 11px; color: var(--muted);">${z.timeframe}</span>
+              </div>
+              <div class="grid-info">
+                <div><span>Proximal (Entry)</span><b>₹${z.entry.toFixed(2)}</b></div>
+                <div><span>Distal (SL)</span><b>₹${stoploss.toFixed(2)}</b></div>
+                <div><span>Target (1:3)</span><b>₹${target.toFixed(2)}</b></div>
+                <div><span>Quantity</span><b>${z.quantity || 1}</b></div>
+              </div>
+              <div class="hypothesis-box">💡 ${z.hypothesis || "विपरीत बाज़ार ट्रेंड की पुष्टि के बाद एंट्री लें।"}</div>
+              <div class="actions">
+                <a href="${tvLink}" target="_blank" class="chart-link">📈 View TradingView Chart</a>
+                <button class="btn-exec" onclick='triggerTrade(${JSON.stringify(z)}, ${stoploss}, ${target})'>
+                  ⚡ Execute Trade
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) { console.error(err); }
+    }
+
+    async function triggerTrade(zone, sl, target) {
+      const mode = document.getElementById("modeBadge").innerText.toLowerCase();
+      let confirmMsg = `${zone.symbol} पर ${zone.isDemand ? 'BUY':'SELL'} ऑर्डर भेजें?\nEntry: ₹${zone.entry}\nSL: ₹${sl.toFixed(2)}\nTarget: ₹${target.toFixed(2)}`;
+      
+      if (!confirm(confirmMsg)) return;
+
+      zone.stoploss = sl;
+      zone.target = target;
+
+      try {
+        const res = await fetch(`${API}/api/execute`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ setup: zone, confirm: true })
+        });
+        const out = await res.json();
+        alert(out.message || "ट्रेड प्रोसेस हो गई।");
+      } catch (err) {
+        alert("ऑर्डर भेजने में विफल: " + err);
+      }
+    }
+
+    async function loadNewsAndInstruments() {
+      // News
+      try {
+        const res = await fetch(`${API}/api/news`);
+        const data = await res.json();
+        const box = document.getElementById("newsList");
+        if (data.items && data.items.length) {
+          box.innerHTML = data.items.slice(0, 5).map(n => `
+            <div class="news-card">
+              <div class="news-title">${n.headline}</div>
+              <div class="news-meta"><span>${n.source || 'Verified'}</span><span>${n.severity || 'Normal'}</span></div>
+            </div>
+          `).join('');
+        } else {
+          box.innerHTML = "<div style='color: var(--muted); font-size:12px;'>कोई बड़ा इवेंट नहीं।</div>";
+        }
+      } catch(e) {}
+    }
+
+    async function loadSettings() {
+      try {
+        const res = await fetch(`${API}/api/settings`);
+        const s = await res.json();
+        const badge = document.getElementById("modeBadge");
+        badge.innerText = s.trading_mode || "PAPER";
+        badge.className = "badge " + (s.trading_mode === 'algo' ? 'algo' : 'paper');
+        document.getElementById("setMode").value = s.trading_mode || 'paper';
+        document.getElementById("setCapital").value = s.capital || 25000;
+        document.getElementById("setRisk").value = s.risk_pct || 0.5;
+      } catch(e) {}
+    }
+
+    async function saveSettings() {
+      const mode = document.getElementById("setMode").value;
+      const capital = parseFloat(document.getElementById("setCapital").value);
+      const risk_pct = parseFloat(document.getElementById("setRisk").value);
+
+      await fetch(`${API}/api/settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trading_mode: mode, capital: capital, risk_pct: risk_pct, target_rr: 3.0 })
+      });
+      alert("Settings सेव हो गई!");
+      loadSettings();
+    }
+
+    // Auto Polling
+    loadHeader();
+    loadZones();
+    loadSettings();
+    setInterval(loadHeader, 10000); // 10s header refresh
+    setInterval(loadZones, 15000);  // 15s zone scan refresh
+  </script>
 </body>
 </html>
