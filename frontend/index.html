@@ -3,134 +3,134 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Algo Zone Terminal</title>
+  <title>Zone Trading Terminal</title>
   <style>
     :root {
-      --bg: #080c14;
-      --card: #131a29;
-      --card-inner: #0b111e;
-      --border: #1f2a3f;
+      --bg: #0b0f19;
+      --card: #151b2b;
+      --border: #222d42;
       --accent: #2962ff;
-      --green: #00c853;
-      --red: #ff3d57;
-      --text: #f0f3fa;
-      --muted: #8b98af;
+      --green: #089981;
+      --red: #f23645;
+      --text: #e0e3eb;
+      --muted: #848e9c;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-    body { background: var(--bg); color: var(--text); padding-bottom: 75px; -webkit-tap-highlight-color: transparent; }
-
+    body { background: var(--bg); color: var(--text); padding-bottom: 80px; -webkit-tap-highlight-color: transparent; }
+    
     /* Top Bar */
-    .topbar { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: #0c121e; border-bottom: 1px solid var(--border); }
-    .topbar h1 { font-size: 19px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; }
-    .badge { font-size: 12px; padding: 4px 10px; border-radius: 6px; font-weight: 700; text-transform: uppercase; }
-    .badge.paper { background: #1c2b48; color: #64b5f6; border: 1px solid #2196f3; }
-    .badge.algo { background: #4a1320; color: #ff5252; border: 1px solid var(--red); }
+    .topbar { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #0f1523; border-bottom: 1px solid var(--border); }
+    .topbar h1 { font-size: 19px; font-weight: bold; color: #fff; display: flex; align-items: center; gap: 6px; }
+    .badge { font-size: 12px; padding: 4px 10px; border-radius: 5px; font-weight: bold; text-transform: uppercase; }
+    .badge.paper { background: #2a3b5c; color: #64b5f6; }
+    .badge.algo { background: #5c182a; color: #ff5252; }
 
-    /* Header Strip - Mobile Friendly */
-    .header-scroll { overflow-x: auto; white-space: nowrap; display: flex; gap: 10px; padding: 12px 14px; background: #0f1626; border-bottom: 1px solid var(--border); }
+    /* Header Strip - Big Touch Chips */
+    .header-scroll { overflow-x: auto; white-space: nowrap; display: flex; gap: 10px; padding: 12px 14px; background: #121826; border-bottom: 1px solid var(--border); }
     .header-scroll::-webkit-scrollbar { display: none; }
-    .sym-chip { display: inline-flex; flex-direction: column; justify-content: center; background: var(--card); border: 1px solid var(--border); padding: 8px 14px; border-radius: 10px; text-decoration: none; min-width: 110px; }
-    .sym-chip .s-name { font-size: 12px; color: var(--muted); font-weight: 700; }
-    .sym-chip .s-price { font-size: 15px; font-weight: 800; color: #fff; margin-top: 3px; }
-    .sym-chip .s-chg { font-size: 12px; font-weight: 700; margin-top: 1px; }
+    .sym-chip { display: inline-flex; flex-direction: column; background: var(--card); border: 1px solid var(--border); padding: 8px 14px; border-radius: 8px; text-decoration: none; min-width: 110px; }
+    .sym-chip .s-name { font-size: 13px; color: #abb7c9; font-weight: bold; }
+    .sym-chip .s-price { font-size: 15px; font-weight: bold; color: #fff; margin-top: 3px; }
+    .sym-chip .s-chg { font-size: 12px; font-weight: 600; margin-top: 2px; }
     .up { color: var(--green) !important; }
     .down { color: var(--red) !important; }
 
-    /* Tabs & Container */
-    .container { padding: 14px; max-width: 900px; margin: 0 auto; }
+    /* Container & Tabs */
+    .container { padding: 14px; max-width: 1000px; margin: 0 auto; }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
-    /* Cards */
-    .zone-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); }
+    /* Zone & Trade Cards */
+    .zone-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
     .zone-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-    .zone-title { font-size: 17px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
-    .tag { font-size: 12px; padding: 4px 8px; border-radius: 6px; font-weight: 800; }
-    .tag.demand { background: rgba(0,200,83,0.15); color: var(--green); border: 1px solid var(--green); }
-    .tag.supply { background: rgba(255,61,87,0.15); color: var(--red); border: 1px solid var(--red); }
-
-    .grid-info { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; background: var(--card-inner); padding: 12px; border-radius: 8px; margin: 10px 0; border: 1px solid var(--border); }
+    .zone-title { font-size: 17px; font-weight: bold; display: flex; align-items: center; gap: 8px; }
+    .tag { font-size: 12px; padding: 3px 8px; border-radius: 5px; font-weight: bold; }
+    .tag.demand { background: rgba(8,153,129,0.18); color: var(--green); border: 1px solid var(--green); }
+    .tag.supply { background: rgba(242,54,69,0.18); color: var(--red); border: 1px solid var(--red); }
+    
+    .grid-info { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; background: #0f1524; padding: 12px; border-radius: 8px; margin: 10px 0; }
     .grid-info div { display: flex; flex-direction: column; }
-    .grid-info span { font-size: 11px; color: var(--muted); font-weight: 600; }
-    .grid-info b { font-size: 14px; margin-top: 3px; color: #fff; }
+    .grid-info span { font-size: 11px; color: var(--muted); }
+    .grid-info b { font-size: 14px; margin-top: 3px; }
 
-    /* P&L Tracking Bar */
-    .pnl-strip { display: flex; justify-content: space-between; align-items: center; background: #121d33; padding: 12px 16px; border-radius: 8px; border: 1px solid #1e3a6d; margin-bottom: 14px; }
-    .pnl-val { font-size: 16px; font-weight: 800; }
-
-    .hypothesis-box { font-size: 13px; color: #cbd5e1; line-height: 1.5; padding: 8px 0; border-top: 1px solid var(--border); margin-top: 8px; }
+    .hypothesis-box { font-size: 13px; color: #abb7c9; line-height: 1.5; padding: 8px 0; border-top: 1px solid #1c2538; margin-top: 8px; }
     .actions { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
-    .chart-link { color: #448aff; text-decoration: none; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; }
+    .chart-link { color: var(--accent); text-decoration: none; font-size: 13px; font-weight: bold; display: inline-flex; align-items: center; gap: 4px; }
+    
+    /* Live P&L Section */
+    .pnl-strip { background: #131d33; border: 1px solid #273b63; border-radius: 10px; padding: 12px 16px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+    .pnl-strip b { font-size: 17px; }
 
-    /* Interactive Buttons */
-    .btn-exec { background: var(--accent); color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
-    .btn-exec:active { transform: scale(0.97); }
+    /* Buttons */
+    .btn-exec { background: var(--accent); color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; }
+    .btn-exec:active { opacity: 0.8; }
 
-    /* News & High Impact Items */
+    /* News Highlights */
     .news-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 10px; }
-    .news-card.high-impact { border-left: 4px solid var(--red); }
-    .news-title { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 6px; line-height: 1.4; }
-    .news-meta { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; }
-
-    /* Settings Box & Toggle */
-    .toggle-header { display: flex; justify-content: space-between; align-items: center; padding: 14px; background: var(--card); border-radius: 10px; cursor: pointer; border: 1px solid var(--border); margin-bottom: 12px; font-weight: 700; }
-    .form-group { margin-bottom: 14px; }
-    .form-group label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
-    .form-control { width: 100%; padding: 12px; background: var(--card-inner); border: 1px solid var(--border); border-radius: 8px; color: #fff; font-size: 15px; }
+    .news-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 6px; }
+    .news-meta { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
+    .sev-high { background: rgba(242,54,69,0.2); color: var(--red); border: 1px solid var(--red); padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; }
 
     /* Bottom Navigation */
-    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 62px; background: #0b111e; border-top: 1px solid var(--border); display: flex; z-index: 100; }
-    .nav-btn { flex: 1; border: none; background: transparent; color: var(--muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 65px; background: #0e1320; border-top: 1px solid var(--border); display: flex; z-index: 100; }
+    .nav-btn { flex: 1; border: none; background: transparent; color: var(--muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: bold; cursor: pointer; }
     .nav-btn.active { color: #fff; border-top: 3px solid var(--accent); }
+    
+    /* Settings Collapsible */
+    .collapse-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 6px 0; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    .form-control { width: 100%; padding: 12px; background: #0c111d; border: 1px solid var(--border); border-radius: 8px; color: #fff; font-size: 15px; }
   </style>
 </head>
 <body>
 
   <!-- Top Bar -->
   <div class="topbar">
-    <h1>⚡ Algo Zone Terminal</h1>
+    <h1>⚡ Zone Terminal</h1>
     <span id="modeBadge" class="badge paper">PAPER</span>
   </div>
 
-  <!-- Header Strip (TradingView Links) -->
+  <!-- Header Strip (Mobile Friendly + TradingView) -->
   <div class="header-scroll" id="headerStrip"></div>
 
+  <!-- Container -->
   <div class="container">
-
+    
     <!-- 1. ZONES TAB -->
-    <div id="tab-zones" class="tab-content active">
-      <!-- Live P&L Header for Active Trades -->
-      <div class="pnl-strip" id="pnlStrip" style="display: none;">
-        <span>📊 आज का एक्टिव P&L:</span>
-        <span id="totalPnl" class="pnl-val">₹0.00</span>
-      </div>
+    <div id="tab-zones" class="tab-content">
+      <!-- Active Positions & Live P&L -->
+      <div id="pnlContainer"></div>
+      <!-- Scanned Valid Zones (Blank if None) -->
       <div id="zonesList"></div>
     </div>
 
-    <!-- 2. NEWS & WATCH TAB (Zone Core Scanned Range) -->
-    <div id="tab-instruments" class="tab-content">
-      <div style="font-weight: 700; font-size: 15px; margin-bottom: 10px;">🎯 ज़ोन रेंज व वॉचलिस्ट शेयर</div>
-      <div id="instList">लोड हो रहा है...</div>
+    <!-- 2. NEWS & WATCH TAB (Full Highlights + Scanned Range) -->
+    <div id="tab-news" class="tab-content">
+      <div style="font-weight: bold; font-size: 15px; margin-bottom: 10px;">🔥 हाई इम्पैक्ट समाचार व इवेंट्स</div>
+      <div id="newsList">लोड हो रहा है...</div>
+      
+      <div style="font-weight: bold; font-size: 15px; margin: 20px 0 10px 0;">🎯 स्कैन रेंज में शामिल प्रमुख स्टॉक्स</div>
+      <div id="scannedWatchList">लोड हो रहा है...</div>
     </div>
 
-    <!-- 3. SETTINGS & FULL-PAGE NEWS -->
+    <!-- 3. SETTINGS TAB (Collapsible + Full Page Analytics) -->
     <div id="tab-settings" class="tab-content">
-      <!-- Collapsible Settings Card -->
-      <div class="toggle-header" onclick="toggleSettingsBox()">
-        <span>⚙️ टर्मिनल पैरामीटर्स (टच करके खोलें / मिनिमाइज़ करें)</span>
-        <span id="toggleIcon">▲</span>
-      </div>
-
-      <div id="settingsBox" class="zone-card">
-        <div class="form-group">
-          <label>ट्रेडिंग मोड</label>
-          <select id="setMode" class="form-control">
-            <option value="paper">Paper Trading (सिमुलेशन)</option>
-            <option value="algo">Algo Trading (Auto Dhan Punch)</option>
-            <option value="manual">Manual Journal</option>
-          </select>
+      <div class="zone-card">
+        <div class="collapse-header" onclick="toggleSettings()">
+          <span style="font-weight: bold; font-size: 16px;">⚙️ ट्रेडिंग सेटिंग्स (टच करके खोलें/बंद करें)</span>
+          <span id="collapseIcon">▼</span>
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        
+        <div id="settingsBody" style="display: none; margin-top: 15px;">
+          <div class="form-group">
+            <label>ट्रेडिंग मोड (Mode)</label>
+            <select id="setMode" class="form-control">
+              <option value="paper">Paper Trading (Safe)</option>
+              <option value="algo">Algo Trading (Auto Dhan)</option>
+              <option value="manual">Manual Journal</option>
+            </select>
+          </div>
           <div class="form-group">
             <label>कैपिटल (₹)</label>
             <input type="number" id="setCapital" class="form-control" value="25000">
@@ -139,62 +139,70 @@
             <label>रिस्क प्रति ट्रेड (%)</label>
             <input type="number" id="setRisk" class="form-control" value="0.5" step="0.1">
           </div>
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label>टारगेट RR (1:3 Auto)</label>
+            <input type="number" id="setRR" class="form-control" value="3.0" readonly>
+          </div>
           <div class="form-group">
             <label>ज़ोन स्कैन रेंज (%)</label>
             <input type="number" id="setScanRange" class="form-control" value="10">
           </div>
-          <div class="form-group">
-            <label>दैनिक ट्रेड लिमिट (Max Trades)</label>
-            <input type="number" id="setTradeLimit" class="form-control" value="3">
-          </div>
+          <button class="btn-exec" style="width: 100%; margin-top: 8px;" onclick="saveSettings()">सेव करें व मिनिमाइज़ करें</button>
         </div>
-        <button class="btn-exec" style="width: 100%; margin-top: 5px;" onclick="saveAndMinimize()">
-          सेव करें और मिनिमाइज़ करें 📁
-        </button>
       </div>
 
-      <!-- फुल पेज न्यूज़ व इवेंट्स -->
-      <div style="margin-top: 15px; font-weight: 700; font-size: 15px; margin-bottom: 10px;">📰 सत्यापित न्यूज़ व ग्लोबल इवेंट्स</div>
-      <div id="fullNewsList">Loading News...</div>
+      <!-- FII/DII Institutional Flow -->
+      <div style="font-weight: bold; font-size: 15px; margin: 15px 0 10px 0;">🏛️ FII / DII संस्थागत गतिविधि</div>
+      <div id="fiiDiiBox">लोड हो रहा है...</div>
     </div>
 
   </div>
 
-  <!-- Bottom Navigation -->
+  <!-- Bottom Nav Bar -->
   <div class="bottom-nav">
-    <button class="nav-btn active" onclick="switchTab('zones')">📊 <span>Zones</span></button>
-    <button class="nav-btn" onclick="switchTab('instruments')">🎯 <span>Watch & Scans</span></button>
-    <button class="nav-btn" onclick="switchTab('settings')">⚙️ <span>Settings & News</span></button>
+    <button class="nav-btn" id="btn-zones" onclick="switchTab('zones')">📊 <span>Zones</span></button>
+    <button class="nav-btn" id="btn-news" onclick="switchTab('news')">📰 <span>News & Watch</span></button>
+    <button class="nav-btn" id="btn-settings" onclick="switchTab('settings')">⚙️ <span>Settings</span></button>
   </div>
 
   <script>
     const API = "";
 
     const TV_MAP = {
-      "NIFTY1!": "NSE:NIFTY", "GIFTNIFTY": "NSE:NIFTY", "DXY": "TVC:DXY",
-      "USDINR": "FX_IDC:USDINR", "US10Y": "TVC:US10Y", "XAUUSD": "TVC:GOLD",
-      "SPOTCRUDE": "TVC:USOIL", "US500": "TVC:SPX"
+      "NIFTY1!": "NSE:NIFTY",
+      "GIFTNIFTY": "NSE:NIFTY",
+      "DXY": "TVC:DXY",
+      "USDINR": "FX_IDC:USDINR",
+      "US10Y": "TVC:US10Y",
+      "XAUUSD": "TVC:GOLD",
+      "SPOTCRUDE": "TVC:USOIL",
+      "US500": "TVC:SPX"
     };
 
+    // Tab Navigation with LocalStorage Memory
     function switchTab(name) {
       document.querySelectorAll('.tab-content').forEach(e => e.classList.remove('active'));
       document.querySelectorAll('.nav-btn').forEach(e => e.classList.remove('active'));
-      document.getElementById('tab-' + name).classList.add('active');
-      event.currentTarget.classList.add('active');
-      if (name === 'instruments') loadWatchlistWithZones();
-      if (name === 'settings') loadFullNews();
+      
+      const tabEl = document.getElementById('tab-' + name);
+      const btnEl = document.getElementById('btn-' + name);
+      if (tabEl) tabEl.classList.add('active');
+      if (btnEl) btnEl.classList.add('active');
+      
+      localStorage.setItem('active_terminal_tab', name);
+
+      if (name === 'news') loadNewsAndWatch();
+      if (name === 'settings') loadFiiDii();
     }
 
-    function toggleSettingsBox() {
-      const box = document.getElementById("settingsBox");
-      const icon = document.getElementById("toggleIcon");
-      if (box.style.display === "none") {
-        box.style.display = "block";
+    function toggleSettings() {
+      const body = document.getElementById("settingsBody");
+      const icon = document.getElementById("collapseIcon");
+      if (body.style.display === "none") {
+        body.style.display = "block";
         icon.innerText = "▲";
       } else {
-        box.style.display = "none";
+        body.style.display = "none";
         icon.innerText = "▼";
       }
     }
@@ -208,17 +216,17 @@
           const sym = item.symbol;
           const p = item.price;
           const tvSym = TV_MAP[sym] || `NSE:${sym}`;
-          const tvLink = `https://in.tradingview.com/chart/?symbol=${tvSym}`;
+          const tvLink = `https://www.tradingview.com/chart/?symbol=${tvSym}`;
           const isUp = (p && p.change_pct >= 0);
           return `
             <a href="${tvLink}" target="_blank" class="sym-chip">
-              <span class="s-name">${sym} ↗</span>
+              <span class="s-name">${sym}</span>
               <span class="s-price">${p && p.price ? p.price : "-"}</span>
               <span class="s-chg ${isUp ? 'up' : 'down'}">${p && p.change_pct !== undefined ? (isUp?'+':'') + p.change_pct.toFixed(2) + '%' : '-'}</span>
             </a>
           `;
         }).join('');
-      } catch (err) {}
+      } catch (err) { console.error(err); }
     }
 
     async function loadZones() {
@@ -227,7 +235,7 @@
         const data = await res.json();
         const box = document.getElementById("zonesList");
         
-        // यदि कोई ज़ोन नहीं है तो स्क्रीन बिल्कुल साफ (Blank) रहेगी
+        // यदि कोई ज़ोन नहीं है तो स्क्रीन पूरी तरह ब्लैंक रहेगी
         if (!data.zones || data.zones.length === 0) {
           box.innerHTML = "";
           return;
@@ -235,9 +243,10 @@
 
         box.innerHTML = data.zones.map(z => {
           const isDemand = z.isDemand;
-          const tvLink = `https://in.tradingview.com/chart/?symbol=NSE:${z.symbol}`;
+          const tvSym = `NSE:${z.symbol}`;
+          const tvLink = `https://www.tradingview.com/chart/?symbol=${tvSym}`;
           
-          // 1:3 RR Logic with 0.1% Distal Buffer
+          // 0.1% Buffer & 1:3 RR Logic
           const buffer = (z.entry * 0.001);
           const stoploss = isDemand ? (z.distVal - buffer) : (z.distVal + buffer);
           const risk = Math.abs(z.entry - stoploss);
@@ -250,7 +259,7 @@
                   <span>${z.symbol}</span>
                   <span class="tag ${isDemand ? 'demand':'supply'}">${isDemand ? 'DEMAND (BUY)' : 'SUPPLY (SELL)'}</span>
                 </div>
-                <span style="font-size: 12px; color: var(--muted); font-weight: 700;">${z.timeframe}</span>
+                <span style="font-size: 12px; color: var(--muted); font-weight:bold;">${z.timeframe}</span>
               </div>
               <div class="grid-info">
                 <div><span>Proximal (Entry)</span><b>₹${z.entry.toFixed(2)}</b></div>
@@ -258,7 +267,7 @@
                 <div><span>Target (1:3)</span><b>₹${target.toFixed(2)}</b></div>
                 <div><span>Quantity</span><b>${z.quantity || 1}</b></div>
               </div>
-              <div class="hypothesis-box">💡 <b>Hypothesis:</b> ${z.hypothesis || "मूल्य ज़ोन की पुष्टि कर रहा है।"}</div>
+              <div class="hypothesis-box">💡 ${z.hypothesis || "मूल संरचना और OI पुष्टि के आधार पर ज़ोन मान्य है।"}</div>
               <div class="actions">
                 <a href="${tvLink}" target="_blank" class="chart-link">📈 TradingView Chart</a>
                 <button class="btn-exec" onclick='triggerTrade(${JSON.stringify(z)}, ${stoploss}, ${target})'>
@@ -268,23 +277,39 @@
             </div>
           `;
         }).join('');
-      } catch (err) {}
+      } catch (err) { console.error(err); }
     }
 
-    async function loadTradesAndPnl() {
+    async function loadTradeHistoryAndPnL() {
       try {
-        const res = await fetch(`${API}/api/trades?limit=10`);
+        const res = await fetch(`${API}/api/trades?limit=5`);
         const data = await res.json();
-        if (data.trades && data.trades.length > 0) {
-          document.getElementById("pnlStrip").style.display = "flex";
-          // Mock calculate running PnL
-          document.getElementById("totalPnl").innerText = "ट्रेड्स सक्रिय (Logs Updated)";
+        const pnlBox = document.getElementById("pnlContainer");
+        if (!data.trades || data.trades.length === 0) {
+          pnlBox.innerHTML = "";
+          return;
         }
+
+        const latest = data.trades[0];
+        const setup = latest.setup || {};
+        pnlBox.innerHTML = `
+          <div class="pnl-strip">
+            <div>
+              <div style="font-size:12px; color:var(--muted);">सक्रिय पोजीशन (${latest.mode.toUpperCase()})</div>
+              <b>${setup.symbol || 'NIFTY'} ${setup.isDemand ? 'BUY' : 'SELL'} @ ₹${setup.entry || 0}</b>
+            </div>
+            <div style="text-align:right;">
+              <span class="badge ${latest.mode === 'algo' ? 'algo':'paper'}">${latest.status}</span>
+            </div>
+          </div>
+        `;
       } catch(e) {}
     }
 
     async function triggerTrade(zone, sl, target) {
-      let confirmMsg = `${zone.symbol} पर ${zone.isDemand ? 'BUY':'SELL'} ऑर्डर भेजें?\nEntry: ₹${zone.entry}\nStopLoss: ₹${sl.toFixed(2)}\nTarget (1:3): ₹${target.toFixed(2)}`;
+      const mode = document.getElementById("modeBadge").innerText.toLowerCase();
+      let confirmMsg = `${zone.symbol} पर ${zone.isDemand ? 'BUY':'SELL'} ऑर्डर प्रोसेस करें?\n\n• Entry: ₹${zone.entry}\n• SL (+Buffer): ₹${sl.toFixed(2)}\n• Target (1:3): ₹${target.toFixed(2)}`;
+      
       if (!confirm(confirmMsg)) return;
 
       zone.stoploss = sl;
@@ -297,65 +322,77 @@
           body: JSON.stringify({ setup: zone, confirm: true })
         });
         const out = await res.json();
-        alert(out.message || "ट्रेड प्रोसेस हो गई।");
-        loadTradesAndPnl();
+        alert(out.message || "ऑर्डर पूरा हुआ।");
+        loadTradeHistoryAndPnL();
       } catch (err) {
-        alert("ऑर्डर भेजने में विफल: " + err);
+        alert("ऑर्डर विफल: " + err);
       }
     }
 
-    async function loadWatchlistWithZones() {
-      try {
-        const res = await fetch(`${API}/api/instruments/live?kind=nse`);
-        const data = await res.json();
-        const box = document.getElementById("instList");
-        if (!data.instruments || data.instruments.length === 0) {
-          box.innerHTML = "<div style='color:var(--muted); padding:10px;'>डेटा फेच हो रहा है...</div>";
-          return;
-        }
-
-        box.innerHTML = data.instruments.slice(0, 30).map(inst => {
-          const p = inst.price;
-          const isUp = (p && p.change_pct >= 0);
-          return `
-            <div class="zone-card" style="margin-bottom: 8px; padding: 12px;">
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                  <b style="font-size:15px;">${inst.symbol}</b>
-                  <div style="font-size:11px; color:var(--muted);">Zone Scanned Range: OK</div>
-                </div>
-                <div style="text-align:right;">
-                  <b style="font-size:15px;">₹${p && p.price ? p.price : "-"}</b>
-                  <div class="${isUp ? 'up':'down'}" style="font-size:12px; font-weight:700;">
-                    ${p && p.change_pct !== undefined ? (isUp?'+':'') + p.change_pct.toFixed(2) + '%' : '-'}
-                  </div>
-                </div>
-              </div>
-            </div>
-          `;
-        }).join('');
-      } catch(e) {}
-    }
-
-    async function loadFullNews() {
+    async function loadNewsAndWatch() {
+      // News
       try {
         const res = await fetch(`${API}/api/news`);
         const data = await res.json();
-        const box = document.getElementById("fullNewsList");
+        const box = document.getElementById("newsList");
         if (data.items && data.items.length) {
-          box.innerHTML = data.items.map(n => `
-            <div class="news-card ${n.severity === 'High' ? 'high-impact' : ''}">
-              <div class="news-title">${n.headline}</div>
-              <div class="news-meta">
-                <span>स्रोत: ${n.source || 'Verified'}</span>
-                <span style="color: ${n.severity === 'High' ? 'var(--red)' : 'var(--muted)'}; font-weight:700;">
-                  ${n.severity || 'Normal Impact'}
-                </span>
+          box.innerHTML = data.items.slice(0, 6).map(n => {
+            const isHigh = n.severity === 'High';
+            return `
+              <div class="news-card">
+                <div class="news-title">${n.headline}</div>
+                <div class="news-meta">
+                  <span>${n.source || 'ForexFactory'}</span>
+                  <span class="${isHigh ? 'sev-high' : ''}">${n.severity || 'Normal'}</span>
+                </div>
               </div>
+            `;
+          }).join('');
+        } else {
+          box.innerHTML = "<div style='color: var(--muted); font-size:13px; padding:10px;'>कोई बड़ा समाचार नहीं है।</div>";
+        }
+      } catch(e) {}
+
+      // Watchlist
+      try {
+        const res = await fetch(`${API}/api/instruments/live?kind=nse`);
+        const data = await res.json();
+        const box = document.getElementById("scannedWatchList");
+        if (data.instruments && data.instruments.length) {
+          box.innerHTML = data.instruments.slice(0, 15).map(inst => {
+            const p = inst.price || {};
+            const isUp = (p.change_pct >= 0);
+            return `
+              <div class="news-card" style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                  <b>${inst.symbol}</b>
+                  <div style="font-size:12px; color:var(--muted);">NSE Equity</div>
+                </div>
+                <div style="text-align:right;">
+                  <b>₹${p.price || '-'}</b>
+                  <div class="${isUp ? 'up':'down'}" style="font-size:12px; font-weight:bold;">${isUp?'+':''}${p.change_pct !== undefined ? p.change_pct.toFixed(2)+'%' : '-'}</div>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      } catch(e) {}
+    }
+
+    async function loadFiiDii() {
+      try {
+        const res = await fetch(`${API}/api/fii-dii`);
+        const data = await res.json();
+        const box = document.getElementById("fiiDiiBox");
+        if (data.rows && data.rows.length) {
+          box.innerHTML = data.rows.map(r => `
+            <div class="news-card" style="display:flex; justify-content:space-between;">
+              <span>${r.date} (${r.category})</span>
+              <b style="color:${r.net_value_cr >= 0 ? 'var(--green)':'var(--red)'}">₹${r.net_value_cr} Cr</b>
             </div>
           `).join('');
         } else {
-          box.innerHTML = "<div style='color: var(--muted); font-size:13px;'>आज के लिए कोई बड़ा प्रभावकारी इवेंट नहीं मिला।</div>";
+          box.innerHTML = "<div style='color:var(--muted); font-size:13px;'>डेटा उपलब्ध नहीं।</div>";
         }
       } catch(e) {}
     }
@@ -374,36 +411,41 @@
       } catch(e) {}
     }
 
-    async function saveAndMinimize() {
+    async function saveSettings() {
       const mode = document.getElementById("setMode").value;
       const capital = parseFloat(document.getElementById("setCapital").value);
       const risk_pct = parseFloat(document.getElementById("setRisk").value);
-      const scan_range_pct = parseFloat(document.getElementById("setScanRange").value);
+      const scan_range = parseFloat(document.getElementById("setScanRange").value);
 
       await fetch(`${API}/api/settings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          trading_mode: mode, 
-          capital: capital, 
-          risk_pct: risk_pct, 
-          scan_range_pct: scan_range_pct, 
-          target_rr: 3.0 
+        body: JSON.stringify({
+          trading_mode: mode,
+          capital: capital,
+          risk_pct: risk_pct,
+          scan_range_pct: scan_range,
+          target_rr: 3.0
         })
       });
-      alert("Settings सुरक्षित कर दी गईं!");
+      alert("Settings अपडेट हो गई!");
+      toggleSettings(); // Auto Minimize
       loadSettings();
-      toggleSettingsBox(); // ऑटोमैटिक मिनिमाइज़
-      loadFullNews();      // फुल पेज न्यूज़ लोड
     }
 
-    // ऑटो-रिफ्रेश साइकिल
+    // Initialize with Saved Tab
+    const savedTab = localStorage.getItem('active_terminal_tab') || 'zones';
+    switchTab(savedTab);
+
     loadHeader();
     loadZones();
+    loadTradeHistoryAndPnL();
     loadSettings();
-    loadTradesAndPnl();
+
+    // Auto Polling Timers
     setInterval(loadHeader, 10000);
     setInterval(loadZones, 15000);
+    setInterval(loadTradeHistoryAndPnL, 10000);
   </script>
 </body>
 </html>
