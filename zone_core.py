@@ -1,24 +1,15 @@
 from __future__ import annotations
 
-import numpy as np
-import pandas as pd
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
+import numpy as np
+import pandas as pd
 
-# -----------------------------------------------------------------------------
-# Configuration
-# -----------------------------------------------------------------------------
-# The complete density/HQ score calculation has intentionally been removed.
-# All non-scoring zone-detection, state, risk and trade-level rules are kept.
-# A base is deliberately required to be a boring/ranging candle. This is a
-# hard structural check, not a score bonus and not an exposed setting.
+# Structural check only: no density/HQ scoring.
 BASE_BORING_MAX_BODY_PCT = 0.55
 
-
 PINE_DEFAULTS: Dict[str, Any] = {
-    # Explicitly changeable through settings(...), scan_zones(...), or
-    # scan_zones(..., accountCapital=...).
     "accountCapital": 25000.0,
     "riskPct": 0.5,
     "targetRR": 5.0,
@@ -34,8 +25,6 @@ PINE_DEFAULTS: Dict[str, Any] = {
     "legInMinAtrMult": 1.0,
     "minClvPct": 0.60,
     "legInToBaseSizeMult": 2.0,
-    # Wickless-body hierarchy: leg-out body must be strictly larger than
-    # leg-in body by this multiplier. 1.0 means simply greater-than.
     "legOutToLegInBodyMult": 1.0,
     "legInMinBodyPct": 0.55,
     "useImbalance": True,
@@ -43,15 +32,12 @@ PINE_DEFAULTS: Dict[str, Any] = {
     "relaxGapCapOvernight": True,
     "rejectOppositeCoverPct": 0.50,
     "testedLegOutRetracePct": 1.00,
-    # Keep a zone after only its first retest. The second proximal touch
-    # makes it Broken/removed.
     "maxTestedCount": 1,
 }
 
+DEFAULT_PARAMS = dict(PINE_DEFAULTS)
 
-# -----------------------------------------------------------------------------
-# Data objects
-# -----------------------------------------------------------------------------
+
 @dataclass
 class Box:
     left: int
@@ -78,8 +64,6 @@ class Zone:
     slVal: float
     tpVal: float
     isDemand: bool
-    # Compatibility fields for the existing Streamlit caller. They are numeric
-    # neutral values only; no score is calculated and no HQ threshold is applied.
     densityScore: int
     isHQ: bool
     patternType: str
@@ -108,577 +92,299 @@ class Zone:
     gapToLegIn: float = 0.0
 
 
-# -----------------------------------------------------------------------------
-# Helpers
-# -----------------------------------------------------------------------------
-def _positive_float(value: Any, name: str) -> float:
-    try:
-        result = float(value)
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{name} must be a positive number") from exc
+def settings(accountCapital: Optional[float] = None, **overrides: Any) -> Dict[str, Any]:
+    config = dict(PINE_DEFAULTS)
+    if accountCapital is not None:
+        overrides["accountCapital"] = accountCapital
+    config.update({k: v for k, v in overrides.items() if k in config})
 
-    if not np.isfinite(result) or result <= 0:
-        raise ValueError(f"{name} must be a positive finite number")
-    return result
+    integer_keys = {
+        "atrPeriod", "volSmaPeriod", "minBaseCountInput",
+        "maxBaseCountInput", "maxTestedCount"
+    }
+    boolean_keys = {"useImbalance", "relaxGapCapOvernight"}
+
+    for key, value in list(config.items()):
+        if key in boolean_keys:
+            config[key] = bool(value)
+            continue
+        try:
+            number = float(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{key} must be numeric") from exc
+        if not np.isfinite(number):
+            raise ValueError(f"{key} must be finite")
+
+        if key in integer_keys:
+            config[key] = int(round(number))
+        else:
+            config[key] = number
+
+    if config["accountCapital"] <= 0:
+        raise ValueError("accountCapital must be positive")
+    if config["targetRR"] <= 0:
+        raise ValueError("targetRR must be positive")
+    config["minBaseCountInput"] = max(1, min(int(config["minBaseCountInput"]), 3))
+    config["maxBaseCountInput"] = max(config["minBaseCountInput"], min(int(config["maxBaseCountInput"]), 3))
+
+    return config
 
 
-# -----------------------------------------------------------------------------
-# Zone engine
-# -----------------------------------------------------------------------------
+def normalize_ohlcv(df: pd.DataFrame) -> pd.DataFrame:
+    """Soft normalization for compatibility with Yahoo Finance and resampled frames."""
+    frame = df.copy()
+    if isinstance(frame.columns, pd.MultiIndex):
+        frame.columns = frame.columns.get_level_values(0)
+    frame.columns = [str(c).strip().lower() for c in frame.columns]
+
+    required = ["open", "high", "low", "close"]
+    missing = [c for c in required if c not in frame.columns]
+    if missing:
+        raise ValueError(f"Missing required OHLC columns: {missing}")
+
+    if "volume" not in frame.columns:
+        frame["volume"] = 0.0
+    frame["volume"] = frame["volume"].fillna(0.0)
+
+    # Clean non-finite values safely
+    for col in required + ["volume"]:
+        frame[col] = pd.to_numeric(frame[col], errors="coerce").fillna(0.0)
+
+    return frame
+
+
 class ZoneEngine:
     def __init__(self, df: pd.DataFrame, **kwargs: Any):
-        self.df = df.copy()
+        self.df = normalize_ohlcv(df)
+        self.config = settings(**kwargs)
+        for key, value in self.config.items():
+            setattr(self, key, value)
 
-        # Volume is optional. The original permissive behaviour is preserved.
-        if "volume" not in self.df.columns:
-            self.df["volume"] = 0.0
-        self.df["volume"] = self.df["volume"].fillna(0.0)
-
-        for key, default in PINE_DEFAULTS.items():
-            setattr(self, key, kwargs.get(key, default))
-
-        self.accountCapital = _positive_float(
-            self.accountCapital, "accountCapital"
-        )
-        self.riskPct = float(self.riskPct)
-        if not np.isfinite(self.riskPct) or self.riskPct < 0:
-            raise ValueError("riskPct must be a finite non-negative number")
-
-        hard_max_base_count = 3
-        self.minBaseCount = max(
-            1, min(self.minBaseCountInput, self.maxBaseCountInput)
-        )
-        self.maxBaseCount = min(self.maxBaseCountInput, hard_max_base_count)
-
+        self.minBaseCount = self.minBaseCountInput
+        self.maxBaseCount = self.maxBaseCountInput
         self.open = self.df["open"].to_numpy(dtype=float)
         self.high = self.df["high"].to_numpy(dtype=float)
         self.low = self.df["low"].to_numpy(dtype=float)
         self.close = self.df["close"].to_numpy(dtype=float)
         self.volume = self.df["volume"].to_numpy(dtype=float)
         self.n = len(self.df)
-        self.dayofweek = self.df.index.dayofweek.to_numpy()
-        self.time_ms = self.df.index.astype(np.int64) // 10**6
 
         self.active_zones: List[Zone] = []
         self.live_zones: List[Zone] = []
         self._prepare_indicators()
 
-    def _rma(self, series: np.ndarray, length: int) -> np.ndarray:
-        n = len(series)
-        result = np.full(n, np.nan)
-        if n < length:
-            return result
-
-        result[length - 1] = np.mean(series[:length])
-        for i in range(length, n):
-            result[i] = (series[i] - result[i - 1]) / length + result[i - 1]
+    @staticmethod
+    def _rma(series: np.ndarray, length: int) -> np.ndarray:
+        result = np.full(len(series), np.nan)
+        if len(series) >= length:
+            result[length - 1] = np.mean(series[:length])
+            for i in range(length, len(series)):
+                result[i] = result[i - 1] + (series[i] - result[i - 1]) / length
         return result
 
     def _prepare_indicators(self) -> None:
         if self.n > 0:
-            previous_close = np.empty(self.n)
-            previous_close[0] = self.close[0]
-            previous_close[1:] = self.close[:-1]
-
-            tr = np.maximum(
+            previous = np.r_[self.close[0], self.close[:-1]]
+            self.current_tr = np.maximum(
                 self.high - self.low,
-                np.maximum(
-                    np.abs(self.high - previous_close),
-                    np.abs(self.low - previous_close),
-                ),
+                np.maximum(abs(self.high - previous), abs(self.low - previous)),
             )
-            tr[0] = self.high[0] - self.low[0]
-            self.current_tr = tr
+            self.current_tr[0] = self.high[0] - self.low[0]
         else:
             self.current_tr = np.empty(0)
-
         self.atr_val = self._rma(self.current_tr, self.atrPeriod)
-        self.vol_sma = (
-            self.df["volume"].rolling(self.volSmaPeriod).mean().to_numpy()
-        )
+        vol_s = pd.Series(self.volume)
+        self.vol_sma = vol_s.rolling(self.volSmaPeriod, min_periods=1).mean().to_numpy()
 
-    def _tr(self, i: int, idx: int) -> float:
-        pos = i - idx
-        return (
-            float(self.current_tr[pos])
-            if 0 <= pos < self.n
-            else float("nan")
-        )
+    def _body_pct(self, pos: int) -> float:
+        size = self.high[pos] - self.low[pos]
+        return abs(self.close[pos] - self.open[pos]) / size if size > 0 else 0.0
 
-    def _is_bull(self, i: int, idx: int) -> bool:
-        pos = i - idx
-        return bool(self.close[pos] > self.open[pos])
-
-    def _is_bear(self, i: int, idx: int) -> bool:
-        pos = i - idx
-        return bool(self.open[pos] > self.close[pos])
-
-    def _body_high_low(self, i: int, idx: int) -> tuple[float, float]:
-        pos = i - idx
-        return max(self.open[pos], self.close[pos]), min(
-            self.open[pos], self.close[pos]
-        )
-
-    def _wick_pct(self, i: int, idx: int) -> float:
-        pos = i - idx
-        candle_range = self.high[pos] - self.low[pos]
-        if candle_range == 0:
-            return 0.0
-
-        return (
-            (self.high[pos] - max(self.open[pos], self.close[pos]))
-            + (min(self.open[pos], self.close[pos]) - self.low[pos])
-        ) / candle_range
-
-    def _body_pct(self, i: int, idx: int) -> float:
-        pos = i - idx
-        candle_range = self.high[pos] - self.low[pos]
-        if candle_range == 0:
-            return 0.0
-        return abs(self.close[pos] - self.open[pos]) / candle_range
+    def _vol_x(self, pos: int) -> float:
+        avg = self.vol_sma[pos]
+        return float(self.volume[pos] / avg) if np.isfinite(avg) and avg > 0 else float("nan")
 
     def _is_overnight_gap(self, i: int) -> bool:
-        if i == 0:
+        if i <= 0:
             return False
-        return bool(
-            self.dayofweek[i] != self.dayofweek[i - 1]
-            or (self.time_ms[i] - self.time_ms[i - 1]) > 86400000
-        )
+        try:
+            return self.df.index[i].date() != self.df.index[i - 1].date()
+        except AttributeError:
+            return False
 
     def _scan_bar(self, i: int) -> None:
-        zone_found_on_this_bar = False
-
-        for b_count in range(self.minBaseCount, self.maxBaseCount + 1):
-            if zone_found_on_this_bar:
-                break
-
-            leg_out_idx = 0
-            leg_in_idx = b_count + 1
-            prev_idx = b_count + 2
-
-            pos_leg_in = i - leg_in_idx
-            if pos_leg_in < 0 or np.isnan(self.atr_val[pos_leg_in]):
+        for count in range(self.minBaseCount, self.maxBaseCount + 1):
+            lin, prev = i - count - 1, i - count - 2
+            if prev < 0 or np.isnan(self.atr_val[lin]):
                 continue
 
-            leg_in_tr = self._tr(i, leg_in_idx)
-            leg_in_low = self.low[pos_leg_in]
-            leg_in_high = self.high[pos_leg_in]
-            leg_in_close = self.close[pos_leg_in]
-            leg_in_vol = self.volume[pos_leg_in]
-            leg_in_range = leg_in_high - leg_in_low
-            leg_in_is_bull = self._is_bull(i, leg_in_idx)
-            leg_in_is_bear = self._is_bear(i, leg_in_idx)
+            lin_tr = self.current_tr[lin]
+            lin_range = self.high[lin] - self.low[lin]
+            lin_bull = self.close[lin] > self.open[lin]
+            lin_bear = self.close[lin] < self.open[lin]
 
-            if (
-                leg_in_range == 0
-                or self._body_pct(i, leg_in_idx) < self.legInMinBodyPct
-            ):
+            if lin_range == 0 or self._body_pct(lin) < self.legInMinBodyPct:
                 continue
 
-            pos_prev = i - prev_idx
-            if pos_prev < 0:
-                continue
-
-            if (
-                leg_in_is_bull and self._is_bear(i, prev_idx)
-            ) or (
-                leg_in_is_bear and self._is_bull(i, prev_idx)
-            ):
-                prev_body_high, prev_body_low = self._body_high_low(i, prev_idx)
-                overlap = max(
-                    0.0,
-                    min(prev_body_high, leg_in_high)
-                    - max(prev_body_low, leg_in_low),
-                )
-                if overlap / leg_in_range >= self.rejectOppositeCoverPct:
+            opposite = (
+                (lin_bull and self.close[prev] < self.open[prev])
+                or (lin_bear and self.close[prev] > self.open[prev])
+            )
+            if opposite:
+                prev_hi = max(self.open[prev], self.close[prev])
+                prev_lo = min(self.open[prev], self.close[prev])
+                overlap = max(0.0, min(prev_hi, self.high[lin]) - max(prev_lo, self.low[lin]))
+                if overlap / lin_range >= self.rejectOppositeCoverPct:
                     continue
 
-            bull_clv = (leg_in_close - leg_in_low) / leg_in_range
-            bear_clv = (leg_in_high - leg_in_close) / leg_in_range
+            base = slice(i - count, i)
+            base_tr = self.current_tr[base]
+            base_body = abs(self.close[base] - self.open[base])
+            base_atr = self.atr_val[base]
 
-            all_base_valid = True
-            all_base_boring = True
-            max_base_tr = 0.0
-            max_base_body = 0.0
-            max_base_high = -1.0
-            min_base_low = 1_000_000_000.0
-
-            for b in range(1, b_count + 1):
-                pos_b = i - b
-                if pos_b < 0 or np.isnan(self.atr_val[pos_b]):
-                    all_base_valid = False
-                    break
-
-                base_tr = self._tr(i, b)
-                if base_tr > self.maxBaseAtrMult * self.atr_val[pos_b]:
-                    all_base_valid = False
-                    break
-
-                base_body_pct = (
-                    abs(self.close[pos_b] - self.open[pos_b]) / base_tr
-                    if base_tr > 0
-                    else 0.0
-                )
-                if base_body_pct > BASE_BORING_MAX_BODY_PCT:
-                    all_base_boring = False
-
-                max_base_tr = max(max_base_tr, base_tr)
-                max_base_body = max(
-                    max_base_body,
-                    abs(self.close[pos_b] - self.open[pos_b]),
-                )
-                max_base_high = max(max_base_high, self.high[pos_b])
-                min_base_low = min(min_base_low, self.low[pos_b])
-
-            if not all_base_valid or max_base_tr == 0:
+            if np.isnan(base_atr).any() or (base_tr > self.maxBaseAtrMult * base_atr).any():
                 continue
 
-            effective_base_size_mult = (
-                1.5 if b_count == 1 else self.legInToBaseSizeMult
-            )
-            if (
-                leg_in_tr < effective_base_size_mult * max_base_tr
-                or leg_in_tr < self.legInMinAtrMult * self.atr_val[pos_leg_in]
-            ):
+            max_tr, max_body = float(max(base_tr)), float(max(base_body))
+            body_ratios = np.divide(base_body, base_tr, out=np.zeros_like(base_body), where=base_tr > 0)
+            if max_tr == 0 or (body_ratios > BASE_BORING_MAX_BODY_PCT).any():
                 continue
 
-            pos_leg_out = i - leg_out_idx
-            leg_out_tr = self._tr(i, leg_out_idx)
-            leg_out_high = self.high[pos_leg_out]
-            leg_out_low = self.low[pos_leg_out]
-            leg_out_close = self.close[pos_leg_out]
-            leg_out_open = self.open[pos_leg_out]
-            leg_out_vol = self.volume[pos_leg_out]
-            leg_in_body_size = abs(leg_in_close - self.open[pos_leg_in])
-            leg_out_body_size = abs(leg_out_close - leg_out_open)
-            is_demand_leg_out = self._is_bull(i, leg_out_idx)
-            is_supply_leg_out = self._is_bear(i, leg_out_idx)
-
-            if not (is_demand_leg_out or is_supply_leg_out):
+            base_hi, base_lo = float(max(self.high[base])), float(min(self.low[base]))
+            size_mult = 1.5 if count == 1 else self.legInToBaseSizeMult
+            if lin_tr < size_mult * max_tr or lin_tr < self.legInMinAtrMult * self.atr_val[lin]:
                 continue
 
-            # Keep the supplied full-engulf rejection rule unchanged.
-            leg_out_fully_engulfs_base = (
-                leg_out_high >= max_base_high
-                and leg_out_low <= min_base_low
-            )
-            if leg_out_fully_engulfs_base:
+            out_tr = self.current_tr[i]
+            out_hi, out_lo = self.high[i], self.low[i]
+            out_open, out_close = self.open[i], self.close[i]
+            demand, supply = out_close > out_open, out_close < out_open
+            if not (demand or supply):
                 continue
 
-            # Strict candle-size hierarchy: a valid setup must contain a
-            # real base, then a larger leg-in, then a still larger leg-out.
-            # This is an additional hard rejection only; all other rules stay
-            # unchanged.
-            is_leg_out_explosive = (
-                leg_out_tr > self.legOutTrMult * self.atr_val[pos_leg_out]
-            )
-            is_leg_out_wick_valid = (
-                self._wick_pct(i, leg_out_idx) <= self.maxWickPct
-            )
-            passes_tr_hierarchy = (
-                leg_out_tr >= self.legOutMinTrRatio * leg_in_tr
-                and leg_in_tr > max_base_tr
-            )
-            passes_strict_candle_hierarchy = (
-                max_base_tr < leg_in_tr < leg_out_tr
-            )
-            # Also require the visible candle bodies to follow the same
-            # hierarchy. This prevents a large-wick candle from being
-            # incorrectly treated as a larger leg-out only because its TR is
-            # large.
-            passes_strict_body_hierarchy = (
-                max_base_body < leg_in_body_size
-                and leg_out_body_size
-                > self.legOutToLegInBodyMult * leg_in_body_size
-            )
-
-            # A leg-out is complete only when its close has broken the base
-            # edge. A close merely beyond leg-in is not enough to confirm the
-            # base-to-leg-out transition.
-            passes_leg_out_close_confirmation = (
-                leg_out_close > max_base_high
-                if is_demand_leg_out
-                else leg_out_close < min_base_low
-            )
-
-            leg_out_volume_missing = (
-                not np.isfinite(leg_out_vol) or leg_out_vol <= 0
-            )
-            passes_volume = leg_out_volume_missing or leg_out_vol > leg_in_vol
-
-            is_overnight = self._is_overnight_gap(i)
-
-            has_imbalance = True
-            has_genuine_gap = False
-            gap_size = 0.0
-            if self.useImbalance:
-                if is_demand_leg_out:
-                    has_genuine_gap = leg_out_low > max_base_high
-                    has_imbalance = has_genuine_gap or (
-                        leg_out_close > leg_in_high
-                    )
-                    gap_size = max(0.0, leg_out_low - max_base_high)
-                elif is_supply_leg_out:
-                    has_genuine_gap = leg_out_high < min_base_low
-                    has_imbalance = has_genuine_gap or (
-                        leg_out_close < leg_in_low
-                    )
-                    gap_size = max(0.0, min_base_low - leg_out_high)
-
-            leg_out_body_high = max(leg_out_open, leg_out_close)
-            leg_out_body_low = min(leg_out_open, leg_out_close)
-            if (
-                leg_out_body_low <= min_base_low
-                and leg_out_body_high >= max_base_high
-                and not has_genuine_gap
-            ):
+            if out_hi >= base_hi and out_lo <= base_lo:
                 continue
 
-            is_rbr = (
-                leg_in_is_bull
-                and bull_clv >= self.minClvPct
-                and is_demand_leg_out
-            )
-            is_dbr = (
-                leg_in_is_bear
-                and bear_clv >= self.minClvPct
-                and is_demand_leg_out
-            )
-            is_dbd = (
-                leg_in_is_bear
-                and bear_clv >= self.minClvPct
-                and is_supply_leg_out
-            )
-            is_rbd = (
-                leg_in_is_bull
-                and bull_clv >= self.minClvPct
-                and is_supply_leg_out
+            lin_body = abs(self.close[lin] - self.open[lin])
+            out_body = abs(out_close - out_open)
+            wick_pct = (
+                ((out_hi - max(out_open, out_close)) + (min(out_open, out_close) - out_lo)) / (out_hi - out_lo)
+                if (out_hi - out_lo) > 0 else 0.0
             )
 
-            # This is now the final validity gate. No score or HQ score
-            # threshold is applied after this point.
             if not (
-                (is_rbr or is_dbr or is_dbd or is_rbd)
-                and is_leg_out_explosive
-                and is_leg_out_wick_valid
-                and passes_tr_hierarchy
-                and all_base_boring
-                and passes_strict_candle_hierarchy
-                and passes_strict_body_hierarchy
-                and passes_leg_out_close_confirmation
-                and passes_volume
-                and has_imbalance
+                out_tr > self.legOutTrMult * self.atr_val[i]
+                and wick_pct <= self.maxWickPct
+                and out_tr >= self.legOutMinTrRatio * lin_tr
+                and max_tr < lin_tr < out_tr
+                and max_body < lin_body
+                and out_body > self.legOutToLegInBodyMult * lin_body
+                and (out_close > base_hi if demand else out_close < base_lo)
+                and (self.volume[i] <= 0 or self.volume[i] > self.volume[lin])
             ):
                 continue
 
-            prox_val = max_base_high if is_demand_leg_out else min_base_low
-            dist_val = min_base_low if is_demand_leg_out else max_base_high
-            sl_val = (
-                dist_val - self.slBufferAtr * self.atr_val[i]
-                if is_demand_leg_out
-                else dist_val + self.slBufferAtr * self.atr_val[i]
-            )
-            risk_per_share = abs(prox_val - sl_val)
-            tp_val = (
-                prox_val + risk_per_share * self.targetRR
-                if is_demand_leg_out
-                else prox_val - risk_per_share * self.targetRR
-            )
-            leg_out_mid_level = (
-                leg_out_high
-                - self.testedLegOutRetracePct * (leg_out_high - leg_out_low)
-                if is_demand_leg_out
-                else leg_out_low
-                + self.testedLegOutRetracePct * (leg_out_high - leg_out_low)
-            )
+            genuine_gap, imbalance, gap_size = False, True, 0.0
+            if self.useImbalance:
+                genuine_gap = out_lo > base_hi if demand else out_hi < base_lo
+                imbalance = genuine_gap or (out_close > self.high[lin] if demand else out_close < self.low[lin])
+                gap_size = max(0.0, out_lo - base_hi if demand else base_lo - out_hi)
 
-            # Preserve the original one-zone-per-bar behaviour. In the old
-            # version this flag was set immediately before duplicate checking.
-            zone_found_on_this_bar = True
-
-            # Duplicate check remains unchanged.
-            is_duplicate = False
-            checked = 0
-            for check_zone in reversed(self.live_zones):
-                if (
-                    check_zone.isDemand == is_demand_leg_out
-                    and abs(check_zone.proxVal - prox_val)
-                    < self.atr_val[i] * 0.25
-                ):
-                    is_duplicate = True
-                    break
-                checked += 1
-                if checked >= 11:
-                    break
-            if is_duplicate:
+            if min(out_open, out_close) <= base_lo and max(out_open, out_close) >= base_hi and not genuine_gap:
                 continue
 
-            box_border_color, box_fill_color = (
-                ("green", ("green", 0.15))
-                if is_demand_leg_out
-                else ("red", ("red", 0.15))
-            )
+            bull_clv = (self.close[lin] - self.low[lin]) / lin_range
+            bear_clv = (self.high[lin] - self.close[lin]) / lin_range
+            valid_lin = (lin_bull and bull_clv >= self.minClvPct) or (lin_bear and bear_clv >= self.minClvPct)
+            if not imbalance or not valid_lin:
+                continue
 
-            risk_pct_of_price = (
-                risk_per_share / prox_val * 100.0 if prox_val else float("nan")
-            )
-            new_zone = Zone(
-                proxVal=prox_val,
-                distVal=dist_val,
-                slVal=sl_val,
-                tpVal=tp_val,
-                isDemand=is_demand_leg_out,
-                # Scoring was removed; numeric neutral values prevent legacy
-                # sort/render code from applying unary minus to None.
+            pattern = ("RBR" if lin_bull else "DBR") if demand else ("RBD" if lin_bull else "DBD")
+            prox, dist = (base_hi, base_lo) if demand else (base_lo, base_hi)
+            sl = dist - self.slBufferAtr * self.atr_val[i] if demand else dist + self.slBufferAtr * self.atr_val[i]
+            risk = abs(prox - sl)
+            tp = prox + risk * self.targetRR if demand else prox - risk * self.targetRR
+
+            if any(
+                z.isDemand == demand and abs(z.proxVal - prox) < self.atr_val[i] * 0.25
+                for z in self.live_zones[-11:]
+            ):
+                break
+
+            color = "green" if demand else "red"
+            ts = self.df.index[i] if hasattr(self.df.index, "__getitem__") else None
+
+            zone = Zone(
+                proxVal=prox,
+                distVal=dist,
+                slVal=sl,
+                tpVal=tp,
+                isDemand=bool(demand),
                 densityScore=0,
                 isHQ=False,
-                patternType=(
-                    "RBR"
-                    if is_rbr
-                    else "DBR"
-                    if is_dbr
-                    else "DBD"
-                    if is_dbd
-                    else "RBD"
-                ),
-                zoneCategory=(
-                    "Continuation" if (is_rbr or is_dbd) else "Reversal"
-                ),
+                patternType=pattern,
+                zoneCategory="Continuation" if pattern in ("RBR", "DBD") else "Reversal",
                 state="Fresh",
                 touchCount=0,
-                startBarIndex=i - b_count,
+                startBarIndex=i - count,
                 createdBarIndex=i,
-                baseCount=b_count,
-                legOutHigh=leg_out_high,
-                legOutLow=leg_out_low,
-                legOutMidLevel=leg_out_mid_level,
-                isOvernight=is_overnight,
-                legInTR=leg_in_tr,
-                legOutTR=leg_out_tr,
-                zoneBox=Box(
-                    left=i - b_count - 1,
-                    top=prox_val,
-                    right=i + 15,
-                    bottom=dist_val,
-                    border_color=box_border_color,
-                    bgcolor=box_fill_color,
+                baseCount=count,
+                legOutHigh=out_hi,
+                legOutLow=out_lo,
+                legOutMidLevel=(
+                    out_hi - self.testedLegOutRetracePct * (out_hi - out_lo)
+                    if demand
+                    else out_lo + self.testedLegOutRetracePct * (out_hi - out_lo)
                 ),
-                timestamp=self.df.index[i],
-                riskPct=risk_pct_of_price,
+                isOvernight=self._is_overnight_gap(i),
+                legInTR=lin_tr,
+                legOutTR=out_tr,
+                zoneBox=Box(i - count - 1, max(prox, dist), i + 15, min(prox, dist), color, (color, 0.15)),
+                timestamp=ts,
+                riskPct=risk / prox * 100 if prox else float("nan"),
                 score10=0.0,
                 baseColourOK=False,
-                legInVolX=(
-                    leg_in_vol / self.vol_sma[pos_leg_in]
-                    if self.vol_sma[pos_leg_in]
-                    and not np.isnan(self.vol_sma[pos_leg_in])
-                    else float("nan")
-                ),
-                legOutVolX=(
-                    leg_out_vol / self.vol_sma[pos_leg_out]
-                    if self.vol_sma[pos_leg_out]
-                    and not np.isnan(self.vol_sma[pos_leg_out])
-                    else float("nan")
-                ),
+                legInVolX=self._vol_x(lin),
+                legOutVolX=self._vol_x(i),
+                retestVolX=float("nan"),
+                entryStatus="",
+                entryPrice=0.0,
                 gapToLegIn=gap_size,
             )
-
-            self.active_zones.append(new_zone)
-            self.live_zones.append(new_zone)
+            self.active_zones.append(zone)
+            self.live_zones.append(zone)
+            break
 
     def _update_zone_states(self, i: int) -> None:
-        if not self.live_zones:
-            return
-
-        lo_t, hi_t = self.low[i], self.high[i]
-
-        for k in range(len(self.live_zones) - 1, -1, -1):
-            zone = self.live_zones[k]
-
-            # A zone cannot be Tested by the same candle that created it.
-            # The leg-out candle is the formation candle, not a retest.
+        for zone in self.live_zones[:]:
             if i <= zone.createdBarIndex:
                 zone.zoneBox.set_right(i + 15)
                 continue
-
-            if zone.state == "Fresh":
-                if zone.isDemand:
-                    if lo_t <= zone.distVal:
-                        zone.state = "Broken"
-                    elif lo_t <= zone.proxVal:
-                        zone.state = "Tested"
-                        zone.touchCount += 1
-                else:
-                    if hi_t >= zone.distVal:
-                        zone.state = "Broken"
-                    elif hi_t >= zone.proxVal:
-                        zone.state = "Tested"
-                        zone.touchCount += 1
-
-            elif zone.state == "Tested":
-                if zone.isDemand:
-                    if lo_t <= zone.distVal:
-                        zone.state = "Broken"
-                    elif lo_t <= zone.proxVal:
-                        zone.touchCount += 1
-                else:
-                    if hi_t >= zone.distVal:
-                        zone.state = "Broken"
-                    elif hi_t >= zone.proxVal:
-                        zone.touchCount += 1
-
-            if (
-                zone.state == "Tested"
-                and zone.touchCount > self.maxTestedCount
-            ):
+            broken = self.low[i] <= zone.distVal if zone.isDemand else self.high[i] >= zone.distVal
+            touched = self.low[i] <= zone.proxVal if zone.isDemand else self.high[i] >= zone.proxVal
+            if broken:
                 zone.state = "Broken"
+            elif touched:
+                zone.state = "Tested"
+                zone.touchCount += 1
+                if zone.touchCount > self.maxTestedCount:
+                    zone.state = "Broken"
 
             if zone.state == "Broken":
                 zone.zoneBox.set_bgcolor(("gray", 0.05))
                 zone.zoneBox.set_border_color(("gray", 0.20))
-                self.live_zones.pop(k)
+                self.live_zones.remove(zone)
             else:
                 zone.zoneBox.set_right(i + 15)
 
     def run(self) -> List[Zone]:
-        min_bar = max(self.atrPeriod, self.maxBaseCount + 3, 11)
-        for i in range(min_bar, self.n):
-            # Do not create a zone on the last available candle. In live data
-            # that candle may still be forming, so its leg-in/base/leg-out
-            # structure is not confirmed yet. Existing zones are still
-            # allowed to receive a retest/break update on that candle.
+        self.active_zones, self.live_zones = [], []
+        min_bars = max(self.atrPeriod, self.maxBaseCount + 3, 11)
+        for i in range(min_bars, self.n):
             if i < self.n - 1 and not np.isnan(self.atr_val[i]):
                 self._scan_bar(i)
             self._update_zone_states(i)
         return self.active_zones
-
-
-# -----------------------------------------------------------------------------
-# Public API
-# -----------------------------------------------------------------------------
-def settings(
-    accountCapital: Optional[float] = None,
-    **overrides: Any,
-) -> Dict[str, Any]:
-    """Return configuration with an explicitly changeable account capital.
-
-    Examples:
-        settings(accountCapital=100000)
-        settings(accountCapital=100000, targetRR=3.0)
-    """
-    result = dict(PINE_DEFAULTS)
-
-    if accountCapital is not None:
-        overrides["accountCapital"] = accountCapital
-
-    # Unknown legacy keys are ignored, as in the original public API.
-    for key, value in overrides.items():
-        if key in PINE_DEFAULTS:
-            result[key] = value
-
-    result["accountCapital"] = _positive_float(
-        result["accountCapital"], "accountCapital"
-    )
-    return result
 
 
 def scan_zones(
@@ -686,27 +392,24 @@ def scan_zones(
     params: Optional[Dict[str, Any]] = None,
     accountCapital: Optional[float] = None,
 ) -> List[Zone]:
-    """Scan zones.
-
-    accountCapital can be changed either by params or by the explicit keyword:
-
-        scan_zones(df, accountCapital=100000)
-        scan_zones(df, {"accountCapital": 100000})
-    """
     incoming = dict(params or {})
     if accountCapital is not None:
         incoming["accountCapital"] = accountCapital
-
-    config = settings(**incoming)
-    engine_config = {
-        key: value for key, value in config.items() if key in PINE_DEFAULTS
-    }
-    return ZoneEngine(df, **engine_config).run()
+    return ZoneEngine(df, **settings(**incoming)).run()
 
 
-def recommended_trade_setup(
-    accountCapital: Optional[float] = None,
-) -> Dict[str, Any]:
+def latest_active_zones(zones: List[Zone]) -> List[Zone]:
+    return [z for z in zones if z.state in ("Fresh", "Tested")]
+
+
+def get_zone_alerts(zones: List[Zone], price: float) -> List[Zone]:
+    return [
+        z for z in latest_active_zones(zones)
+        if min(z.proxVal, z.distVal) <= price <= max(z.proxVal, z.distVal)
+    ]
+
+
+def recommended_trade_setup(accountCapital: Optional[float] = None) -> Dict[str, Any]:
     config = settings(accountCapital=accountCapital)
     return {
         "patterns": ["RBR", "DBR", "DBD", "RBD"],
@@ -718,14 +421,10 @@ def recommended_trade_setup(
     }
 
 
-def backtest_summary(
-    zones: List[Zone],
-    df: pd.DataFrame,
-) -> Dict[str, Any]:
-    active = [z for z in zones if z.state in ("Fresh", "Tested")]
+def backtest_summary(zones: List[Zone], df: pd.DataFrame) -> Dict[str, Any]:
     return {
         "n_zones": len(zones),
-        "n_active": len(active),
+        "n_active": len(latest_active_zones(zones)),
         "n_broken": sum(z.state == "Broken" for z in zones),
     }
 
@@ -741,17 +440,16 @@ def realistic_roi(
     entry_mode: str = "prox",
     max_hold: int = 40,
 ) -> Dict[str, Any]:
-    selected = [
-        z for z in zones if not patterns or z.patternType in patterns
-    ]
     return {
-        "n_trades": 0,
-        "win_pct": 0.0,
-        "net_roi_pct": 0.0,
-        "sample_zones": len(selected),
+        "implemented": False,
+        "n_trades": None,
+        "win_pct": None,
+        "net_roi_pct": None,
+        "sample_zones": sum(not patterns or z.patternType in patterns for z in zones),
         "risk_pct": risk_pct,
         "capital": capital,
         "targetRR": rr,
+        "message": "Trade backtest is not implemented.",
     }
 
 
@@ -768,27 +466,8 @@ def target_context(
         "max": 6,
         "label": "—",
         "why": [],
-        "A": None,
-        "B": None,
-        "C": None,
-        "D": None,
-        "E": None,
-        "F": None,
+        **dict.fromkeys("ABCDEF"),
     }
-
-
-def latest_active_zones(zones: List[Zone]) -> List[Zone]:
-    return [z for z in zones if z.state in ("Fresh", "Tested")]
-
-
-def get_zone_alerts(zones: List[Zone], price: float) -> List[Zone]:
-    return [
-        z
-        for z in latest_active_zones(zones)
-        if min(z.proxVal, z.distVal)
-        <= price
-        <= max(z.proxVal, z.distVal)
-    ]
 
 
 def resample_nse_session(
@@ -797,35 +476,17 @@ def resample_nse_session(
     session_start: str = "09:15",
     session_end: str = "15:30",
 ) -> pd.DataFrame:
-    df = df.sort_index().copy()
-    out_frames = []
+    """Safe NSE session resampling compatible with legacy calls."""
+    frame = normalize_ohlcv(df)
+    if not isinstance(frame.index, pd.DatetimeIndex):
+        return frame
 
-    agg_dict = {
-        "open": "first",
-        "high": "max",
-        "low": "min",
-        "close": "last",
-    }
-    if "volume" in df.columns:
-        agg_dict["volume"] = "sum"
-
-    for _, day_df in df.groupby(df.index.date):
+    agg = {"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"}
+    pieces = []
+    for _, day_df in frame.groupby(frame.index.date):
         day_df = day_df.between_time(session_start, session_end)
         if day_df.empty:
             continue
-
-        agg = (
-            day_df.resample(
-                f"{n_hours}h",
-                origin="start",
-                label="left",
-                closed="left",
-            )
-            .agg(agg_dict)
-            .dropna(subset=["open"])
-        )
-        out_frames.append(agg)
-
-    if out_frames:
-        return pd.concat(out_frames).sort_index()
-    return pd.DataFrame(columns=list(agg_dict.keys()))
+        resampled = day_df.resample(f"{int(n_hours)}h", origin="start", label="left", closed="left").agg(agg)
+        pieces.append(resampled.dropna(subset=["open", "high", "low", "close"]))
+    return pd.concat(pieces).sort_index() if pieces else frame.iloc[:0]
